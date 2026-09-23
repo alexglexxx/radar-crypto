@@ -4,14 +4,61 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
+function getAsistente(symbol:string, sel:any, history:any[]){
+  if(!sel) return null
+  const score = sel.score
+  const last = history.slice(-6)
+  const subiendo = last.length>=2 && last[last.length-1].score >= last[0].score
+  const plano = last.length>=4 && Math.abs(last[last.length-1].score - last[0].score) < 5
+  const precio = Number(sel.price)
+
+  if(score >= 80 && subiendo){
+    return {
+      estado: `🔥 ${symbol} EN MODO EXPLOSIVO`,
+      color: '#22c55e',
+      queHacer: 'PREPARA ENTRADA AHORA',
+      porQue: `Score ${score} y subiendo. En las últimas 6 barras pasó de ${last[0]?.score || '?'} a ${last[last.length-1]?.score || score}. Eso significa que precio + volumen + noticias están alineados. Es el patrón que los pros esperan toda la semana.`,
+      paso: `1. Ya tienes entrada $${precio.toFixed(2)} marcada.\n2. Pon en Bitso orden limitada en $${precio.toFixed(2)}, no mercado.\n3. En automático pon tu SL en $${(precio*0.97).toFixed(2)} (-3%) y tu TP en $${(precio*1.05).toFixed(2)} (+5%).\n4. Solo 10% de tu capital. Si tienes $10k, son $1k aquí.`,
+      psicologia: 'No corras. Si no te da entrada en 10 min, no es tu taxi. Vendrá otro. Tu chamba es no perder, no es ganar rápido.'
+    }
+  }
+  if(score >= 70 && plano){
+    return {
+      estado: `🟡 ${symbol} CON FUERZA PERO PLANO`,
+      color: '#eab308',
+      queHacer: 'ESPERA CONFIRMACIÓN',
+      porQue: `Score ${score} es bueno, pero lleva plano como en tu foto. Eso pasa cuando ya subió y ahora la gente está dudando si seguir comprando. Si compras aquí, puedes quedar atrapado arriba y te toca SL.`,
+      paso: `1. No compres aún.\n2. Espera 2-3 barras más (30-45 min).\n3. Si el score sube a 85+ y la gráfica de precio rompe hacia arriba, ahí sí es entrada.\n4. Si baja a 60, se canceló. Te ahorraste una pérdida.`,
+      psicologia: 'Aquí es donde el novato pierde por FOMO. Tú no. Tú esperas que la gráfica te confirme. La paciencia te paga.'
+    }
+  }
+  if(score >= 45 && score < 70){
+    return {
+      estado: `😐 ${symbol} EN SEMÁFORO AMARILLO`,
+      color: '#eab308',
+      queHacer: 'NO TOQUES NADA - SOLO MIRA',
+      porQue: `Score ${score} es tierra de nadie. Ni sube ni baja. Es como tu ETH en 50 de tu foto. Aquí el mercado está aburrido y si entras, es 50/50 como volado. Los pros no juegan volados.`,
+      paso: `1. Cierra Bitso.\n2. Ponte alarma cuando este score llegue a 75+.\n3. Úsalo para ver cómo se mueven las otras 3 monedas. La que esté en verde es tu oportunidad real.`,
+      psicologia: 'Tu cerebro te va a decir "haz algo". Ese es el enemigo. En amarillo, hacer nada ES hacer algo bien.'
+    }
+  }
+  return {
+    estado: `🔴 ${symbol} NO SE TOCA`,
+    color: '#ef4444',
+    queHacer: 'PROTEGE TU CAPITAL',
+    porQue: `Score ${score} bajo significa precio cayendo o noticia mala. Si compras aquí pensando "está barato", te va a salir más barato mañana. Es cuchillo cayendo.`,
+    paso: `1. Si ya estás dentro de ${symbol} de antes, revisa si ya te dio SL.\n2. Si no estás, quédate fuera.\n3. Apunta en tu diario: por qué bajó. ¿Fue noticia? ¿BTC arrastró todo?`,
+    psicologia: 'La mejor operación del día a veces es no operar. Hoy tu ganancia es no perder -3%.'
+  }
+}
+
 export default function Page(){
   const [signals, setSignals] = useState<any[]>([])
   const [selected, setSelected] = useState('BTC')
   const [history, setHistory] = useState<any[]>([])
-  const [news, setNews] = useState<any[]>([])
 
   useEffect(()=>{ load() },[])
-  useEffect(()=>{ loadHist(); loadNews() },[selected])
+  useEffect(()=>{ loadHist() },[selected])
 
   async function load(){
     const { data } = await supabase.from('signals').select('*').order('created_at',{ascending:false}).limit(80)
@@ -24,23 +71,21 @@ export default function Page(){
     const { data } = await supabase.from('signals').select('*').eq('symbol',selected).order('created_at',{ascending:false}).limit(24)
     if(data) setHistory(data.reverse())
   }
-  async function loadNews(){
-    try{
-      const r = await fetch('/api/news?symbol='+selected+'&t='+Date.now())
-      const j = await r.json()
-      setNews(j.news||[])
-    }catch{}
-  }
 
   const sel = signals.find((x:any)=>x.symbol===selected)
+  const prices = history.map((h:any)=>Number(h.price))
+  const minPrice = prices.length? Math.min(...prices) : 0
+  const maxPrice = prices.length? Math.max(...prices) : 1
+  const priceRange = maxPrice - minPrice || 1
+  const asistente = sel? getAsistente(selected, sel, history) : null
 
   return (
     <div style={{minHeight:'100vh', background:'#000', color:'#fff', padding:12, fontFamily:'system-ui'}}>
-      <div style={{maxWidth:900, margin:'0 auto'}}>
+      <div style={{maxWidth:980, margin:'0 auto'}}>
         <h1 style={{fontSize:18, fontWeight:900}}>RADAR CRYPTO • EN VIVO</h1>
-        <div style={{fontSize:9, color:'#888', marginBottom:10}}>Toca una moneda para ver su grafica explicada</div>
+        <div style={{fontSize:9, color:'#888', marginBottom:10}}>4 monedas, 1 asistente. Sin ruido.</div>
 
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:8, marginBottom:12}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:12}}>
           {signals.map((s:any)=>(
             <div key={s.symbol} onClick={()=>setSelected(s.symbol)} style={{cursor:'pointer', background:selected===s.symbol?'#18181b':'#101010', border:selected===s.symbol?'2px solid #22c55e':'1px solid #222', borderRadius:12, padding:10}}>
               <div style={{display:'flex', justifyContent:'space-between'}}>
@@ -52,67 +97,75 @@ export default function Page(){
           ))}
         </div>
 
-        <div style={{display:'grid', gridTemplateColumns:'1.2fr 0.8fr', gap:8}}>
-          <div style={{background:'#101010', border:'1px solid #222', borderRadius:12, padding:12}}>
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:8}}>
-              <div style={{fontSize:11, fontWeight:700}}>GRAFICA SCORE {selected}</div>
-              <div style={{fontSize:8, background:'#052e16', color:'#4ade80', padding:'2px 6px', borderRadius:10}}>Cada barra = 15 min</div>
-            </div>
+        <div style={{display:'grid', gridTemplateColumns:'1.2fr 0.9fr', gap:8}}>
+          <div style={{display:'flex', flexDirection:'column', gap:8}}>
 
-            <div style={{display:'flex', gap:6, fontSize:8, marginBottom:6}}>
-              <span>🔴 0-44 NO</span>
-              <span>🟡 45-69 ESPERA</span>
-              <span>🟢 70-100 COMPRA</span>
-            </div>
-
-            <div style={{display:'flex', gap:6}}>
-              <div style={{display:'flex', flexDirection:'column', justifyContent:'space-between', fontSize:8, color:'#555', height:120}}>
-                <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
-              </div>
-              <div style={{flex:1, display:'flex', alignItems:'flex-end', gap:3, height:120, borderLeft:'1px solid #333', borderBottom:'1px solid #333', padding:4, position:'relative'}}>
-                <div style={{position:'absolute', top:'30%', left:0, right:0, height:1, background:'#22c55e', opacity:0.3}}></div>
-                {history.map((h:any,i:number)=>(
-                  <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%'}}>
-                    <div style={{fontSize:7, color:h.score>=70?'#22c55e':'#555', marginBottom:2}}>{h.score}</div>
-                    <div style={{width:'100%', height:(h.score||0)+'%', background:h.score>=70?'#22c55e':h.score>=45?'#eab308':'#444', borderRadius:2, minHeight:3}}></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{display:'flex', gap:3, marginLeft:18, marginTop:4}}>
-              {history.map((h:any,i:number)=>{
-                if(i % 6!==0) return <div key={i} style={{flex:1}}></div>
-                const d = new Date(h.created_at)
-                return <div key={i} style={{flex:1, fontSize:7, color:'#666', textAlign:'center'}}>{d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</div>
-              })}
-            </div>
-
-            {sel && (
-              <div style={{marginTop:10, background:'#000', border:'1px solid #222', borderRadius:8, padding:8}}>
-                <div style={{fontSize:10, color:'#22c55e', fontWeight:700}}>QUE SIGNIFICA?</div>
-                <div style={{fontSize:10, color:'#aaa', marginTop:4}}>
-                  {sel.score>=70? 'Score '+sel.score+' VERDE = buen momento. Barras verdes arriba de linea = tendencia fuerte COMPRAR.' : sel.score>=45? 'Score '+sel.score+' AMARILLO = esperar. Cuando barras crucen linea verde de 70, comprar.' : 'Score '+sel.score+' ROJO = no comprar.'}
+            <div style={{background:'#101010', border:'1px solid #222', borderRadius:12, padding:12}}>
+              <div style={{fontSize:11, fontWeight:700, marginBottom:6}}>📊 SCORE {selected} - ¿COMPRAR?</div>
+              <div style={{display:'flex', gap:6}}>
+                <div style={{display:'flex', flexDirection:'column', justifyContent:'space-between', fontSize:8, color:'#555', height:80}}>
+                  <span>100</span><span>50</span><span>0</span>
                 </div>
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginTop:8}}>
-                  <div style={{background:'#111', padding:5, borderRadius:5, textAlign:'center'}}><div style={{fontSize:7, color:'#888'}}>ENTRADA</div><div style={{fontSize:10, fontWeight:700}}>${Number(sel.price).toFixed(2)}</div></div>
-                  <div style={{background:'#1a0a0a', padding:5, borderRadius:5, textAlign:'center'}}><div style={{fontSize:7, color:'#ef4444'}}>SL -3%</div><div style={{fontSize:10, fontWeight:700}}>${(Number(sel.price)*0.97).toFixed(2)}</div></div>
-                  <div style={{background:'#052e16', padding:5, borderRadius:5, textAlign:'center'}}><div style={{fontSize:7, color:'#4ade80'}}>TP +5%</div><div style={{fontSize:10, fontWeight:700}}>${(Number(sel.price)*1.05).toFixed(2)}</div></div>
+                <div style={{flex:1, display:'flex', alignItems:'flex-end', gap:3, height:80, borderLeft:'1px solid #333', borderBottom:'1px solid #333', padding:4, position:'relative'}}>
+                  <div style={{position:'absolute', top:'30%', left:0, right:0, height:1, background:'#22c55e', opacity:0.3}}></div>
+                  {history.map((h:any,i:number)=>(
+                    <div key={i} style={{flex:1, height:(h.score||0)+'%', background:h.score>=70?'#22c55e':'#444', borderRadius:2, minHeight:3}}></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{background:'#101010', border:'1px solid #222', borderRadius:12, padding:12}}>
+              <div style={{display:'flex', justifyContent:'space-between', marginBottom:8}}>
+                <div style={{fontSize:11, fontWeight:700}}>💰 PRECIO {selected} - 6H</div>
+                <div style={{fontSize:8, background:'#111', color:'#aaa', padding:'2px 6px', borderRadius:10, border:'1px solid #333'}}>${minPrice.toFixed(2)} → ${maxPrice.toFixed(2)}</div>
+              </div>
+              <div style={{display:'flex', gap:6}}>
+                <div style={{display:'flex', flexDirection:'column', justifyContent:'space-between', fontSize:8, color:'#555', height:90, textAlign:'right'}}>
+                  <span>${maxPrice.toFixed(0)}</span><span>${minPrice.toFixed(0)}</span>
+                </div>
+                <div style={{flex:1, position:'relative', height:90, borderLeft:'1px solid #333', borderBottom:'1px solid #333'[STRIPPED 33 bytes]"100%" height="100%" style={{overflow:'visible'}}>
+                    <polyline fill="none" stroke="#22c55e" strokeWidth="2" points={history.map((h:any,i:number)=>{ const x=(i/(history.length-1||1))*100; const y=100-((Number(h.price)-minPrice)/priceRange*90+5); return `${x}%,${y}%` }).join(' ')} />
+                  </svg>
+                </div>
+              </div>
+              {sel && (
+                <div style={{marginTop:10, background:'#000', border:'1px solid #222', borderRadius:8, padding:10}}>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6}}>
+                    <div style={{background:'#111', padding:6, borderRadius:6, textAlign:'center'}}><div style={{fontSize:7, color:'#888'}}>ENTRADA</div><div style={{fontSize:10, fontWeight:700}}>${Number(sel.price).toFixed(2)}</div></div>
+                    <div style={{background:'#1a0a0a', padding:6, borderRadius:6, textAlign:'center'}}><div style={{fontSize:7, color:'#ef4444'}}>SL -3%</div><div style={{fontSize:10, fontWeight:700}}>${(Number(sel.price)*0.97).toFixed(2)}</div></div>
+                    <div style={{background:'#052e16', padding:6, borderRadius:6, textAlign:'center'}}><div style={{fontSize:7, color:'#4ade80'}}>TP +5%</div><div style={{fontSize:10, fontWeight:700}}>${(Number(sel.price)*1.05).toFixed(2)}</div></div>
+                  </div>
+                  <a href={'https://bitso.com/trade/'+selected.toLowerCase()+'_mxn'} target="_blank" style={{display:'block', textAlign:'center', marginTop:10, background:'#22c55e', color:'#000', fontWeight:900, padding:'12px', borderRadius:10, textDecoration:'none', fontSize:13}}>IR A COMPRAR EN BITSO ↗</a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{background:'#0f0f0f', border:'1px solid #222', borderRadius:12, padding:0, overflow:'hidden'}}>
+            {asistente && (
+              <div>
+                <div style={{background:asistente.color, color:'#000', padding:10, fontWeight:900, fontSize:11}}>{asistente.estado}</div>
+                <div style={{padding:12, display:'flex', flexDirection:'column', gap:12}}>
+                  <div>
+                    <div style={{fontSize:9, color:asistente.color, fontWeight:800, letterSpacing:0.5}}>QUÉ HACER AHORA</div>
+                    <div style={{fontSize:13, fontWeight:800, marginTop:4}}>{asistente.queHacer}</div>
+                  </div>
+                  <div style={{background:'#000', border:'1px solid #222', borderRadius:8, padding:10}}>
+                    <div style={{fontSize:9, color:'#888', fontWeight:700}}>POR QUÉ TE DIGO ESTO</div>
+                    <div style={{fontSize:11, color:'#ccc', marginTop:6, lineHeight:1.4, whiteSpace:'pre-wrap'}}>{asistente.porQue}</div>
+                  </div>
+                  <div style={{background:'#111', border:'1px solid #333', borderRadius:8, padding:10}}>
+                    <div style={{fontSize:9, color:'#4ade80', fontWeight:700}}>PASO A PASO</div>
+                    <div style={{fontSize:11, color:'#fff', marginTop:6, lineHeight:1.5, whiteSpace:'pre-wrap'}}>{asistente.paso}</div>
+                  </div>
+                  <div style={{background:'#1a1a0a', border:'1px dashed #444', borderRadius:8, padding:10}}>
+                    <div style={{fontSize:9, color:'#eab308', fontWeight:700}}>🧠 MENTE DE PRO</div>
+                    <div style={{fontSize:11, color:'#aaa', marginTop:6, lineHeight:1.4, fontStyle:'italic'}}>{asistente.psicologia}</div>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-
-          <div style={{background:'#101010', border:'1px solid #222', borderRadius:12, padding:12}}>
-            <div style={{fontSize:11, fontWeight:700, marginBottom:8}}>NOTICIAS {selected}</div>
-            <div style={{display:'flex', flexDirection:'column', gap:6, maxHeight:380, overflowY:'auto'}}>
-              {news.map((n:any,i:number)=>(
-                <a key={i} href={n.url} target="_blank" style={{textDecoration:'none', background:'#000', border:'1px solid #222', borderRadius:8, padding:8, display:'block'}}>
-                  <div style={{fontSize:11, fontWeight:700, color:'#fff'}}>{n.title}</div>
-                  <div style={{fontSize:8, color:'#22c55e', marginTop:3}}>Leer ↗</div>
-                </a>
-              ))}
-            </div>
           </div>
         </div>
       </div>
