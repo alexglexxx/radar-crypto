@@ -1,126 +1,105 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
-const NEWS_MOCK: any = {
-  BTC: { reason: 'RSI en 33 (sobreventa) + MACD alcista + ballenas acumulando. Tendencia: rebote técnico.', tag: 'Acumulación' },
-  ETH: { reason: 'RSI neutral 49, volumen bajo. Esperando actualización Pectra. Tendencia lateral.', tag: 'Lateral' },
-  SOL: { reason: 'Volumen +45% y TVL subiendo. Memecoins empujando red. Tendencia alcista.', tag: 'Alcista' },
-  XRP: { reason: 'Noticia: Avance caso SEC. Volumen +60%. Tendencia alcista fuerte.', tag: 'Noticia positiva' },
+const NEWS: any = {
+  BTC: { tag: 'Acumulación', text: 'RSI 40 sobreventa + MACD alcista. Ballenas acumulando, volumen +31%. Rebote técnico probable.' },
+  ETH: { tag: 'Lateral', text: 'RSI 54 neutral, esperando Pectra. Volumen bajo 9%. Mantener hasta breakout.' },
+  SOL: { tag: 'Alcista', text: 'Volumen +45%, TVL subiendo. Memecoins empujando. Tendencia alcista clara.' },
+  XRP: { tag: 'Noticia positiva', text: 'Avance caso SEC + volumen +60%. RSI 72 en zona alta pero con fuerza compradora.' },
 }
 
 export default function Page(){
   const [signals, setSignals] = useState<any[]>([])
+  const [selected, setSelected] = useState('XRP')
   const [history, setHistory] = useState<any[]>([])
-  const [selected, setSelected] = useState('BTC')
 
-  useEffect(()=>{
-    load()
-  },[])
+  useEffect(()=>{ load() },[])
+  useEffect(()=>{ loadHist() },[selected])
 
   async function load(){
-    const { data } = await supabase.from('signals').select('*').order('created_at', {ascending:false}).limit(100)
+    const { data } = await supabase.from('signals').select('*').order('created_at',{ascending:false}).limit(80)
     if(!data) return
-    // Agrupa por symbol y toma el ultimo
-    const latest: any = {}
-    data.forEach((r:any)=>{
-      if(!latest[r.symbol]) latest[r.symbol] = r
-    })
-    setSignals(Object.values(latest))
-    // Historico para grafica
-    const hist = data.filter((r:any)=>r.symbol===selected).reverse().slice(-20).map((r:any,i:number)=>({ time: i, price: Number(r.price), score: r.score }))
-    setHistory(hist)
-    if(Object.values(latest).length>0 && !Object.values(latest).find((s:any)=>s.symbol===selected)){
-      setSelected((Object.values(latest)[0] as any).symbol)
-    }
+    const latest:any={}
+    data.forEach((r:any)=>{ if(!latest[r.symbol]) latest[r.symbol]=r })
+    const arr = Object.values(latest) as any[]
+    setSignals(arr)
+    if(arr.length) setSelected(arr[0].symbol)
+  }
+  async function loadHist(){
+    const { data } = await supabase.from('signals').select('*').eq('symbol',selected).order('created_at',{ascending:false}).limit(20)
+    if(data) setHistory(data.reverse())
   }
 
-  useEffect(()=>{
-    supabase.from('signals').select('*').order('created_at',{ascending:false}).limit(100).then(({data})=>{
-      if(!data) return
-      const hist = data.filter((r:any)=>r.symbol===selected).reverse().slice(-20).map((r:any,i:number)=>({ time: new Date(r.created_at).toLocaleTimeString().slice(0,5), price: Number(r.price), score: r.score }))
-      setHistory(hist)
-    })
-  },[selected])
-
   return (
-    <div className="min-h-screen bg-black text-white p-3 font-sans">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-3">
-          <h1 className="text-xl font-black tracking-tight">RADAR CRYPTO • EN VIVO</h1>
-          <div className="text-[10px] bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">● Conectado a Supabase</div>
+    <div style={{minHeight:'100vh', background:'#000', color:'#fff', padding:12, fontFamily:'system-ui'}}>
+      <div style={{maxWidth:1100, margin:'0 auto'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
+          <h1 style={{fontSize:22, fontWeight:900, letterSpacing:-1}}>RADAR CRYPTO • EN VIVO</h1>
+          <span style={{fontSize:10, background:'#052e16', color:'#4ade80', border:'1px solid #14532d', padding:'4px 8px', borderRadius:20}}>● Conectado a Supabase</span>
         </div>
 
-        {/* GRID 4 EN UN PANTALLAZO - CUADROS PEQUEÑOS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        {/* 4 EN PANTALLA */}
+        <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginBottom:14}}>
           {signals.map((s:any)=>(
-            <div key={s.symbol} onClick={()=>setSelected(s.symbol)} className={`cursor-pointer rounded-xl border p-3 transition-all ${selected===s.symbol ? 'border-green-500 bg-zinc-900' : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'} `}>
-              <div className="flex justify-between items-start mb-2">
+            <div key={s.symbol} onClick={()=>setSelected(s.symbol)} style={{
+              cursor:'pointer', background:selected===s.symbol?'#18181b':'#101010', border:selected===s.symbol?'1px solid #22c55e':'1px solid #27272a',
+              borderRadius:12, padding:10
+            }}>
+              <div style={{display:'flex', justifyContent:'space-between'}}>
                 <div>
-                  <div className="font-black text-sm">{s.symbol}</div>
-                  <div className="text-[11px] text-zinc-400">${Number(s.price).toLocaleString(undefined,{maximumFractionDigits:2})}</div>
+                  <div style={{fontWeight:900, fontSize:13}}>{s.symbol}</div>
+                  <div style={{fontSize:11, color:'#a1a1aa'}}>${Number(s.price).toLocaleString()}</div>
                 </div>
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black ${s.score>=70 ? 'bg-green-500 text-black' : s.score>=40 ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'}`}>{s.score}</div>
+                <div style={{width:32,height:32, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:12,
+                  background: s.score>=70?'#22c55e': s.score>=40?'#eab308':'#ef4444', color: s.score>=40?'#000':'#fff'
+                }}>{s.score}</div>
               </div>
-              <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden mb-2">
-                <div className={`h-full ${s.score>=70?'bg-green-500': s.score>=40?'bg-yellow-500':'bg-red-500'}`} style={{width:`${s.score}%`}}/>
+              <div style={{height:4, background:'#27272a', borderRadius:4, margin:'8px 0', overflow:'hidden'}}>
+                <div style={{width:`${s.score}%`, height:'100%', background: s.score>=70?'#22c55e': s.score>=40?'#eab308':'#ef4444'}}/>
               </div>
-              <div className="flex justify-between items-center">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${s.status==='COMPRAR'?'bg-green-500/20 text-green-400':'bg-yellow-500/20 text-yellow-400'}`}>{s.status}</span>
-                <span className="text-[10px] text-zinc-500">rsi {s.change_24h} • {s.volume}%</span>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                <span style={{fontSize:9, fontWeight:800, padding:'2px 6px', borderRadius:6, background: s.status==='COMPRAR'?'#052e16':'#422006', color: s.status==='COMPRAR'?'#4ade80':'#facc15'}}>{s.status}</span>
+                <span style={{fontSize:9, color:'#71717a'}}>rsi {s.change_24h} • {s.volume}%</span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {/* GRAFICA HISTORICO */}
-          <div className="lg:col-span-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-xs font-bold tracking-widest text-zinc-400">HISTÓRICO {selected} - SCORE & PRECIO (últimos 20)</h2>
-              <span className="text-[10px] text-zinc-500">live cada 15m</span>
+        <div style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:8}}>
+          <div style={{background:'#101010', border:'1px solid #27272a', borderRadius:12, padding:10}}>
+            <div style={{fontSize:10, fontWeight:700, color:'#a1a1aa', letterSpacing:1, marginBottom:8}}>HISTÓRICO {selected} - SCORE (últimos {history.length}) • live cada 15m</div>
+            <div style={{display:'flex', alignItems:'flex-end', gap:3, height:120}}>
+              {history.map((h:any,i:number)=>(
+                <div key={i} style={{flex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end', gap:2}}>
+                  <div title={`${h.score}`} style={{height:`${h.score}%`, background:'#22c55e', borderRadius:3, minHeight:2}}/>
+                  <div style={{fontSize:7, color:'#52525b', textAlign:'center'}}>{new Date(h.created_at).toLocaleTimeString().slice(0,5)}</div>
+                </div>
+              ))}
             </div>
-            <div className="h-[180px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history}>
-                  <XAxis dataKey="time" hide/>
-                  <YAxis hide domain={['auto','auto']}/>
-                  <Tooltip contentStyle={{background:'#18181b', border:'1px solid #27272a', fontSize:10}}/>
-                  <Line type="monotone" dataKey="score" stroke="#22c55e" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="price" stroke="#3f3f46" strokeWidth={1} dot={false} strokeDasharray="3 3"/>
-                </LineChart>
-              </ResponsiveContainer>
+            <div style={{display:'flex', gap:12, marginTop:8, fontSize:10, color:'#71717a'}}>
+              <span>Score actual: <b style={{color:'#fff'}}>{history[history.length-1]?.score || '--'}/100</b></span>
+              <span>Precio: <b style={{color:'#fff'}}>${Number(history[history.length-1]?.price || 0).toLocaleString()}</b></span>
             </div>
           </div>
 
-          {/* SECCION NOTICIAS / POR QUE COMPRAR */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
-            <h2 className="text-xs font-bold tracking-widest text-zinc-400 mb-3">¿POR QUÉ {selected}? • TENDENCIA</h2>
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <span className="text-[10px] px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 h-fit">{NEWS_MOCK[selected]?.tag || 'Analizando'}</span>
-                <span className="text-[10px] px-2 py-1 rounded-full bg-zinc-800 text-zinc-400">{selected==='BTC'?'Vol +32%':'Vol alto'}</span>
-              </div>
-              <p className="text-[12px] leading-relaxed text-zinc-300">
-                {NEWS_MOCK[selected]?.reason || 'Analizando RSI, MACD y volumen para generar recomendación...'}
-              </p>
-              <div className="rounded-lg bg-black border border-zinc-800 p-2.5 text-[11px] space-y-1">
-                <div className="flex justify-between"><span className="text-zinc-500">RSI</span><span className="text-white">{signals.find((x:any)=>x.symbol===selected)?.change_24h || '--'} {Number(signals.find((x:any)=>x.symbol===selected)?.change_24h) < 40 ? '→ sobreventa' : '→ neutral'}</span></div>
-                <div className="flex justify-between"><span className="text-zinc-500">MACD</span><span className="text-green-400">alcista</span></div>
-                <div className="flex justify-between"><span className="text-zinc-500">Volumen 24h</span><span className="text-white">{signals.find((x:any)=>x.symbol===selected)?.volume || '--'}%</span></div>
-                <div className="flex justify-between"><span className="text-zinc-500">Score Radar</span><span className="font-bold text-white">{signals.find((x:any)=>x.symbol===selected)?.score}/100</span></div>
-              </div>
-              <div className="text-[10px] text-zinc-500 pt-1">
-                Fuente: Supabase + CoinGecko + Análisis técnico. No es consejo financiero.
-              </div>
+          <div style={{background:'#101010', border:'1px solid #27272a', borderRadius:12, padding:10}}>
+            <div style={{fontSize:10, fontWeight:700, color:'#a1a1aa', letterSpacing:1, marginBottom:8}}>¿POR QUÉ {selected}? • TENDENCIA</div>
+            <div style={{display:'flex', gap:6, marginBottom:8}}>
+              <span style={{fontSize:9, padding:'3px 8px', borderRadius:12, background:'#1e3a8a', color:'#93c5fd', border:'1px solid #1e40af'}}>{NEWS[selected]?.tag || 'Analizando'}</span>
+            </div>
+            <p style={{fontSize:12, lineHeight:'16px', color:'#d4d4d8', marginBottom:10}}>{NEWS[selected]?.text}</p>
+            <div style={{background:'#000', border:'1px solid #27272a', borderRadius:8, padding:8, fontSize:11}}>
+              <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}><span style={{color:'#71717a'}}>RSI</span><span>{signals.find((x:any)=>x.symbol===selected)?.change_24h} → {Number(signals.find((x:any)=>x.symbol===selected)?.change_24h)<45?'sobreventa':'neutral'}</span></div>
+              <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}><span style={{color:'#71717a'}}>MACD</span><span style={{color:'#4ade80'}}>alcista</span></div>
+              <div style={{display:'flex', justifyContent:'space-between'}}><span style={{color:'#71717a'}}>Volumen</span><span>+{signals.find((x:any)=>x.symbol===selected)?.volume}%</span></div>
             </div>
           </div>
         </div>
 
-        <div className="text-[10px] text-zinc-600 text-center mt-4">Radar Crypto v2 • 4 por pantalla • histórico live • actualizado cada 15 min vía /api/cron</div>
+        <div style={{textAlign:'center', fontSize:9, color:'#52525b', marginTop:12}}>Radar Crypto v2.1 • 4 por pantalla sin Tailwind • histórico real de Supabase • actualizado cada 15m vía /api/cron</div>
       </div>
     </div>
   )
