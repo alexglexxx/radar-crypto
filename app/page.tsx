@@ -1,6 +1,4 @@
 'use client'
-export const dynamic = 'force-dynamic'
-
 import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -67,4 +65,57 @@ export default function Page(){
               <span>🟢 70-100 COMPRA</span>
             </div>
 
-            <div
+            <div style={{display:'flex', gap:6}}>
+              <div style={{display:'flex', flexDirection:'column', justifyContent:'space-between', fontSize:8, color:'#555', height:120}}>
+                <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
+              </div>
+              <div style={{flex:1, display:'flex', alignItems:'flex-end', gap:3, height:120, borderLeft:'1px solid #333', borderBottom:'1px solid #333', padding:4, position:'relative'}}>
+                <div style={{position:'absolute', top:'30%', left:0, right:0, height:1, background:'#22c55e', opacity:0.3}}></div>
+                {history.map((h:any,i:number)=>(
+                  <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%'}}>
+                    <div style={{fontSize:7, color:h.score>=70?'#22c55e':'#555', marginBottom:2}}>{h.score}</div>
+                    <div style={{width:'100%', height:(h.score||0)+'%', background:h.score>=70?'#22c55e':h.score>=45?'#eab308':'#444', borderRadius:2, minHeight:3}}></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{display:'flex', gap:3, marginLeft:18, marginTop:4}}>
+              {history.map((h:any,i:number)=>{
+                if(i % 6!==0) return <div key={i} style={{flex:1}}></div>
+                const d = new Date(h.created_at)
+                return <div key={i} style={{flex:1, fontSize:7, color:'#666', textAlign:'center'}}>{d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</div>
+              })}
+            </div>
+
+            {sel && (
+              <div style={{marginTop:10, background:'#000', border:'1px solid #222', borderRadius:8, padding:8}}>
+                <div style={{fontSize:10, color:'#22c55e', fontWeight:700}}>QUE SIGNIFICA?</div>
+                <div style={{fontSize:10, color:'#aaa', marginTop:4}}>
+                  {sel.score>=70? 'Score '+sel.score+' VERDE = buen momento. Barras verdes arriba de linea = tendencia fuerte COMPRAR.' : sel.score>=45? 'Score '+sel.score+' AMARILLO = esperar. Cuando barras crucen linea verde de 70, comprar.' : 'Score '+sel.score+' ROJO = no comprar.'}
+                </div>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginTop:8}}>
+                  <div style={{background:'#111', padding:5, borderRadius:5, textAlign:'center'}}><div style={{fontSize:7, color:'#888'}}>ENTRADA</div><div style={{fontSize:10, fontWeight:700}}>${Number(sel.price).toFixed(2)}</div></div>
+                  <div style={{background:'#1a0a0a', padding:5, borderRadius:5, textAlign:'center'}}><div style={{fontSize:7, color:'#ef4444'}}>SL -3%</div><div style={{fontSize:10, fontWeight:700}}>${(Number(sel.price)*0.97).toFixed(2)}</div></div>
+                  <div style={{background:'#052e16', padding:5, borderRadius:5, textAlign:'center'}}><div style={{fontSize:7, color:'#4ade80'}}>TP +5%</div><div style={{fontSize:10, fontWeight:700}}>${(Number(sel.price)*1.05).toFixed(2)}</div></div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{background:'#101010', border:'1px solid #222', borderRadius:12, padding:12}}>
+            <div style={{fontSize:11, fontWeight:700, marginBottom:8}}>NOTICIAS {selected}</div>
+            <div style={{display:'flex', flexDirection:'column', gap:6, maxHeight:380, overflowY:'auto'}}>
+              {news.map((n:any,i:number)=>(
+                <a key={i} href={n.url} target="_blank" style={{textDecoration:'none', background:'#000', border:'1px solid #222', borderRadius:8, padding:8, display:'block'}}>
+                  <div style={{fontSize:11, fontWeight:700, color:'#fff'}}>{n.title}</div>
+                  <div style={{fontSize:8, color:'#22c55e', marginTop:3}}>Leer ↗</div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
