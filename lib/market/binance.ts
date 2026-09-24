@@ -8,6 +8,7 @@ export type BinanceCandle = {
   volume: number
 }
 
+
 const BASE_URL = 'https://api.binance.com'
 
 export async function fetchBinanceClosedCandles(symbol: string, interval = '15m', limit = 250): Promise<BinanceCandle[]> {
