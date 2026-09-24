@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { fetchBinanceClosedCandles } from '@/lib/market/binance'
-import { calculateFeatures } from '@/lib/features'
+import { fetchBinanceClosedCandles } from '../../../lib/market/binance'
+import { calculateFeatures } from '../../../lib/features'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
