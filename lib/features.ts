@@ -125,7 +125,7 @@ export function calculateFeatures(candles: Candle[]): FeatureSet {
   const macdSignal = macdSeries.length >= 9 ? ema(macdSeries, 9) : null
 
   return {
-    return_5m: returnFrom(candles, 1),
+    return_5m: null,
     return_15m: returnFrom(candles, 1),
     return_1h: returnFrom(candles, 4),
     return_4h: returnFrom(candles, 16),

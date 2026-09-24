@@ -69,7 +69,11 @@ alter table public.features enable row level security;
 alter table public.radar_signals enable row level security;
 alter table public.signal_outcomes enable row level security;
 
+drop policy if exists "public read market snapshots" on public.market_snapshots;
 create policy "public read market snapshots" on public.market_snapshots for select to anon, authenticated using (true);
+drop policy if exists "public read features" on public.features;
 create policy "public read features" on public.features for select to anon, authenticated using (true);
+drop policy if exists "public read radar signals" on public.radar_signals;
 create policy "public read radar signals" on public.radar_signals for select to anon, authenticated using (true);
+drop policy if exists "public read signal outcomes" on public.signal_outcomes;
 create policy "public read signal outcomes" on public.signal_outcomes for select to anon, authenticated using (true);
