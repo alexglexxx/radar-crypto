@@ -10,36 +10,20 @@ export type BinanceCandle = {
 
 const BASE_URL = 'https://api.binance.com'
 
-export async function fetchBinanceClosedCandles(
-  symbol: string,
-  interval = '15m',
-  limit = 250,
-): Promise<BinanceCandle[]> {
+export async function fetchBinanceClosedCandles(symbol: string, interval = '15m', limit = 250): Promise<BinanceCandle[]> {
   const url = new URL('/api/v3/klines', BASE_URL)
   url.searchParams.set('symbol', symbol)
   url.searchParams.set('interval', interval)
   url.searchParams.set('limit', String(Math.min(Math.max(limit, 1), 1000)))
 
-  const response = await fetch(url, {
-    cache: 'no-store',
-    headers: { accept: 'application/json' },
-  })
-
-  if (!response.ok) {
-    throw new Error(`Binance klines failed: HTTP ${response.status}`)
-  }
+  const response = await fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } })
+  if (!response.ok) throw new Error(`Binance klines failed: HTTP ${response.status}`)
 
   const rows = (await response.json()) as unknown
+  if (!Array.isArray(rows)) throw new Error('Binance klines returned an invalid payload')
 
-  if (!Array.isArray(rows)) {
-    throw new Error('Binance klines returned an invalid payload')
-  }
-
-  const candles = rows.map((row): BinanceCandle => {
-    if (!Array.isArray(row) || row.length < 7) {
-      throw new Error('Binance returned a malformed kline')
-    }
-
+  return rows.map((row): BinanceCandle => {
+    if (!Array.isArray(row) || row.length < 7) throw new Error('Binance returned a malformed kline')
     return {
       openTime: Number(row[0]),
       open: Number(row[1]),
@@ -49,17 +33,5 @@ export async function fetchBinanceClosedCandles(
       volume: Number(row[5]),
       closeTime: Number(row[6]),
     }
-  })
-
-  const now = Date.now()
-
-  return candles.filter(
-    (candle) =>
-      Number.isFinite(candle.open) &&
-      Number.isFinite(candle.high) &&
-      Number.isFinite(candle.low) &&
-      Number.isFinite(candle.close) &&
-      Number.isFinite(candle.volume) &&
-      candle.closeTime <= now,
-  )
+  }).filter(c => c.closeTime <= Date.now())
 }
