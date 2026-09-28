@@ -18,8 +18,15 @@ function getSupabaseAdmin() {
 }
 
 function isAuthorized(request: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  return Boolean(secret) && request.headers.get('authorization') === `Bearer ${secret}`
+  const secret = process.env.CRON_SECRET?.trim()
+  const authorization = request.headers.get('authorization')?.trim()
+
+  if (!secret || !authorization) return false
+
+  const [scheme, ...tokenParts] = authorization.split(/\s+/)
+  const token = tokenParts.join(' ')
+
+  return scheme.toLowerCase() === 'bearer' && token === secret
 }
 
 export async function GET(request: NextRequest) {
