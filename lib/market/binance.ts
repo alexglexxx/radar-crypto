@@ -8,8 +8,11 @@ export type BinanceCandle = {
   volume: number
 }
 
-
-const BASE_URL = 'https://api.binance.com'
+// Binance documents data-api.binance.vision as a public market-data
+// endpoint for unauthenticated REST market data, including /api/v3/klines.
+// This avoids routing public market-data requests through api.binance.com,
+// which currently returns HTTP 451 from Vercel's runtime region.
+const BASE_URL = 'https://data-api.binance.vision'
 
 export async function fetchBinanceClosedCandles(symbol: string, interval = '15m', limit = 250): Promise<BinanceCandle[]> {
   const url = new URL('/api/v3/klines', BASE_URL)
@@ -17,22 +20,28 @@ export async function fetchBinanceClosedCandles(symbol: string, interval = '15m'
   url.searchParams.set('interval', interval)
   url.searchParams.set('limit', String(Math.min(Math.max(limit, 1), 1000)))
 
-  const response = await fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } })
+  const response = await fetch(url, {
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
+  })
+
   if (!response.ok) throw new Error(`Binance klines failed: HTTP ${response.status}`)
 
   const rows = (await response.json()) as unknown
   if (!Array.isArray(rows)) throw new Error('Binance klines returned an invalid payload')
 
-  return rows.map((row): BinanceCandle => {
-    if (!Array.isArray(row) || row.length < 7) throw new Error('Binance returned a malformed kline')
-    return {
-      openTime: Number(row[0]),
-      open: Number(row[1]),
-      high: Number(row[2]),
-      low: Number(row[3]),
-      close: Number(row[4]),
-      volume: Number(row[5]),
-      closeTime: Number(row[6]),
-    }
-  }).filter(c => c.closeTime <= Date.now())
+  return rows
+    .map((row): BinanceCandle => {
+      if (!Array.isArray(row) || row.length < 7) throw new Error('Binance returned a malformed kline')
+      return {
+        openTime: Number(row[0]),
+        open: Number(row[1]),
+        high: Number(row[2]),
+        low: Number(row[3]),
+        close: Number(row[4]),
+        volume: Number(row[5]),
+        closeTime: Number(row[6]),
+      }
+    })
+    .filter(c => c.closeTime <= Date.now())
 }
