@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { fetchBinanceClosedCandles } from '../../../lib/market/binance'
 import { calculateFeatures } from '../../../lib/features'
+import { calculateRadarScore } from '../../../lib/scoring'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -20,17 +21,17 @@ function getSupabaseAdmin() {
 function isAuthorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim()
   const authorization = request.headers.get('authorization')?.trim()
-
   if (!secret || !authorization) return false
 
   const [scheme, ...tokenParts] = authorization.split(/\s+/)
   const token = tokenParts.join(' ')
-
   return scheme.toLowerCase() === 'bearer' && token === secret
 }
 
 export async function GET(request: NextRequest) {
-  if (!isAuthorized(request)) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+  }
 
   try {
     const supabase = getSupabaseAdmin()
@@ -43,21 +44,33 @@ export async function GET(request: NextRequest) {
       const rows = candles.map(c => ({
         captured_at: new Date(c.openTime).toISOString(),
         source_timestamp: new Date(c.closeTime).toISOString(),
-        symbol, exchange: 'binance', timeframe: TIMEFRAME,
-        open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume,
+        symbol,
+        exchange: 'binance',
+        timeframe: TIMEFRAME,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
       }))
 
       const { data: snapshots, error: snapshotError } = await supabase
         .from('market_snapshots')
         .upsert(rows, { onConflict: 'captured_at,symbol,exchange,timeframe' })
-        .select('id,captured_at,open,high,low,close,volume')
+        .select('id,captured_at,source_timestamp,open,high,low,close,volume')
+
       if (snapshotError) throw new Error(`Supabase snapshots ${symbol}: ${snapshotError.message}`)
+      if (!snapshots?.length) throw new Error(`No snapshots persisted for ${symbol}`)
 
       const featureRows = snapshots.map((s: any) => {
         const candleSet = candles.filter(c => c.openTime <= new Date(s.captured_at).getTime())
         const f = calculateFeatures(candleSet)
         return {
-          snapshot_id: s.id, symbol, timeframe: TIMEFRAME, captured_at: s.captured_at, ...f,
+          snapshot_id: s.id,
+          symbol,
+          timeframe: TIMEFRAME,
+          captured_at: s.captured_at,
+          ...f,
         }
       }).filter((r: any) => r.ema_200 !== null)
 
@@ -68,12 +81,53 @@ export async function GET(request: NextRequest) {
         if (featureError) throw new Error(`Supabase features ${symbol}: ${featureError.message}`)
       }
 
-      results.push({ symbol, candles: candles.length, snapshots: snapshots.length, features: featureRows.length })
+      const latest = featureRows.sort((a: any, b: any) =>
+        new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime(),
+      )[0]
+
+      if (!latest) throw new Error(`No usable features for ${symbol}`)
+
+      const latestSnapshot = snapshots.find((s: any) => s.id === latest.snapshot_id)
+      if (!latestSnapshot) throw new Error(`Missing latest snapshot for ${symbol}`)
+
+      const { score, status } = calculateRadarScore(latest)
+
+      const { error: signalError } = await supabase
+        .from('signals')
+        .insert({
+          symbol,
+          price: latestSnapshot.close,
+          score,
+          change_24h: latest.return_24h === null ? null : latest.return_24h * 100,
+          volume: latestSnapshot.volume,
+          status,
+        })
+
+      if (signalError) throw new Error(`Supabase signal ${symbol}: ${signalError.message}`)
+
+      results.push({
+        symbol,
+        candles: candles.length,
+        snapshots: snapshots.length,
+        features: featureRows.length,
+        latest: latest.captured_at,
+        score,
+        status,
+      })
     }
 
-    return NextResponse.json({ ok: true, exchange: 'binance', timeframe: TIMEFRAME, results })
+    return NextResponse.json({
+      ok: true,
+      exchange: 'binance',
+      timeframe: TIMEFRAME,
+      generated_at: new Date().toISOString(),
+      results,
+    })
   } catch (error) {
     console.error('[radar-crypto cron]', error)
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Unknown ingestion error' }, { status: 500 })
+    return NextResponse.json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown ingestion error',
+    }, { status: 500 })
   }
 }
