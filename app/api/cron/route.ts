@@ -90,6 +90,16 @@ export async function GET(request: NextRequest) {
       const latestSnapshot = snapshots.find((s: any) => s.id === latest.snapshot_id)
       if (!latestSnapshot) throw new Error(`Missing latest snapshot for ${symbol}`)
 
+      const { data: persistedFeature, error: featureLookupError } = await supabase
+        .from('features')
+        .select('id')
+        .eq('snapshot_id', latest.snapshot_id)
+        .single()
+
+      if (featureLookupError || !persistedFeature) {
+        throw new Error(`Missing persisted feature for ${symbol}`)
+      }
+
       const { score, status } = calculateRadarScore(latest)
       const decision = status === 'SETUP LONG' ? 'LONG' : 'WAIT'
 
@@ -97,7 +107,7 @@ export async function GET(request: NextRequest) {
         .from('radar_signals')
         .insert({
           snapshot_id: latestSnapshot.id,
-          feature_id: latest.id,
+          feature_id: persistedFeature.id,
           symbol,
           timeframe: TIMEFRAME,
           regime: status,
