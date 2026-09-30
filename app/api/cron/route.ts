@@ -91,19 +91,45 @@ export async function GET(request: NextRequest) {
       if (!latestSnapshot) throw new Error(`Missing latest snapshot for ${symbol}`)
 
       const { score, status } = calculateRadarScore(latest)
+      const decision = status === 'SETUP LONG' ? 'LONG' : 'WAIT'
 
       const { error: signalError } = await supabase
-        .from('signals')
+        .from('radar_signals')
         .insert({
+          snapshot_id: latestSnapshot.id,
+          feature_id: latest.id,
           symbol,
-          price: latestSnapshot.close,
-          score,
-          change_24h: latest.return_24h === null ? null : latest.return_24h * 100,
-          volume: latestSnapshot.volume,
-          status,
+          timeframe: TIMEFRAME,
+          regime: status,
+          signal_score: score,
+          decision,
+          entry_price: latestSnapshot.close,
+          stop_price: null,
+          target_price: null,
+          risk_reward: null,
+          estimated_probability: null,
+          expected_r: null,
+          sample_size: featureRows.length,
+          rationale: {
+            exchange: 'binance',
+            price: latestSnapshot.close,
+            return_15m: latest.return_15m,
+            return_1h: latest.return_1h,
+            return_4h: latest.return_4h,
+            return_24h: latest.return_24h,
+            ema_20: latest.ema_20,
+            ema_50: latest.ema_50,
+            ema_200: latest.ema_200,
+            trend_strength: latest.trend_strength,
+            rsi_14: latest.rsi_14,
+            macd_histogram: latest.macd_histogram,
+            volume_ratio: latest.volume_ratio,
+            atr: latest.atr,
+          },
+          model_version: 'v1.1-live',
         })
 
-      if (signalError) throw new Error(`Supabase signal ${symbol}: ${signalError.message}`)
+      if (signalError) throw new Error(`Supabase radar signal ${symbol}: ${signalError.message}`)
 
       results.push({
         symbol,
@@ -113,6 +139,7 @@ export async function GET(request: NextRequest) {
         latest: latest.captured_at,
         score,
         status,
+        decision,
       })
     }
 
