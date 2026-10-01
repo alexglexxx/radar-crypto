@@ -48,7 +48,11 @@ function tag(item: string, name: string) {
 }
 
 function parseRss(xml: string, source: string): Candidate[] {
-  return [...xml.matchAll(/<item[\\s\\S]*?<\/item>/gi)].map(m => m[0]).map(item => ({
+  const items: string[] = []
+  const regex = /<item[\s\S]*?<\/item>/gi
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(xml)) !== null) items.push(match[0])
+  return items.map(item => ({
     source,
     url: tag(item, 'link'),
     title: tag(item, 'title'),
