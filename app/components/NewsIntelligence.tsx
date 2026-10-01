@@ -11,16 +11,14 @@ const intensity: Record<string,string> = { critical:'CRÍTICO', high:'ALTO', med
 export default function NewsIntelligence(){
   const [briefing,setBriefing]=useState<Briefing|null>(null)
   const [loading,setLoading]=useState(true)
-  useEffect(()=>{ fetch('/api/daily-news').then(r=>r.json()).then(async()=>{
-    const res=await fetch('/api/news-briefing'); const json=await res.json(); if(json.ok) setBriefing(json.briefing)
-  }).catch(()=>{}).finally(()=>setLoading(false)) },[])
+  useEffect(()=>{ fetch('/api/news-briefing').then(r=>r.json()).then(json=>{if(json.ok) setBriefing(json.briefing)}).catch(()=>{}).finally(()=>setLoading(false)) },[])
 
   return <section style={{marginTop:18,border:'1px solid #1e293b',borderRadius:20,background:'linear-gradient(145deg,#0d1317,#090c0f)',overflow:'hidden'}}>
     <div style={{padding:'16px 17px 13px',borderBottom:'1px solid #172027',display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
       <div><div style={{fontSize:10,fontWeight:900,letterSpacing:'.14em',color:'#34d399'}}>NEWS INTELLIGENCE</div><div style={{fontSize:21,fontWeight:950,letterSpacing:'-.04em',marginTop:3}}>CRYPTO DAILY</div></div>
       <div style={{textAlign:'right',fontSize:9,color:'#64748b'}}><div style={{color:'#94a3b8',fontWeight:800}}>BTC · ETH · SOL · XRP</div><div>1 briefing / día</div></div>
     </div>
-    {loading ? <div style={{padding:22,color:'#64748b',fontSize:12}}>Preparando inteligencia…</div> : !briefing ? <div style={{padding:22,color:'#64748b',fontSize:12}}>Aún no hay briefing diario.</div> : <>
+    {loading ? <div style={{padding:22,color:'#64748b',fontSize:12}}>Cargando briefing…</div> : !briefing ? <div style={{padding:22,color:'#64748b',fontSize:12}}>Aún no hay briefing diario.</div> : <>
       <div style={{padding:'15px 17px 10px'}}><div style={{fontSize:13,lineHeight:1.55,color:'#cbd5e1'}}>{briefing.intro}</div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:12}}><div style={{background:'#10161a',borderRadius:12,padding:11}}><div style={{fontSize:8,color:'#64748b',fontWeight:900}}>LECTURA DEL MERCADO</div><div style={{fontSize:11,color:'#e2e8f0',lineHeight:1.45,marginTop:5}}>{briefing.market_read}</div></div><div style={{background:'#10161a',borderRadius:12,padding:11}}><div style={{fontSize:8,color:'#64748b',fontWeight:900}}>RIESGO / ATENCIÓN</div><div style={{fontSize:11,color:'#e2e8f0',lineHeight:1.45,marginTop:5}}>{briefing.risk_read}</div></div></div></div>
       <div style={{padding:'2px 17px 17px',display:'grid',gap:9}}>{briefing.items.map((item,i)=>{const d=direction[item.impact_direction]||direction.neutral; return <article key={item.url} style={{background:'#0a0f13',border:'1px solid #1a252d',borderRadius:15,padding:13}}>
         <div style={{display:'flex',gap:9,alignItems:'flex-start'}}><div style={{minWidth:25,height:25,borderRadius:8,background:item.impact_direction==='positive'?'rgba(52,211,153,.12)':item.impact_direction==='negative'?'rgba(251,113,133,.12)':'rgba(251,191,36,.10)',display:'grid',placeItems:'center',fontWeight:900,color:item.impact_direction==='positive'?'#34d399':item.impact_direction==='negative'?'#fb7185':'#fbbf24'}}>{i+1}</div><div style={{flex:1}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><a href={item.url} target="_blank" rel="noreferrer" style={{color:'#f8fafc',textDecoration:'none',fontWeight:900,fontSize:13,lineHeight:1.3}}>{item.title}</a><span style={{fontSize:9,color:'#64748b',whiteSpace:'nowrap'}}>{item.source}</span></div>
