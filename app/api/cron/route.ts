@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       const { score, status } = calculateRadarScore(latest)
       const decision = status === 'SETUP LONG' ? 'LONG' : 'WAIT'
 
-      const { error: signalError } = await supabase
+      const { data: signal, error: signalError } = await supabase
         .from('radar_signals')
         .upsert({
           snapshot_id: latestSnapshot.id,
