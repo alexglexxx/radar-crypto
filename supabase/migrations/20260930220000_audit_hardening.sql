@@ -44,7 +44,9 @@ select distinct on (symbol)
   sample_size,
   model_version
 from public.radar_signals
-where exchange_placeholder is null
+where timeframe = '15m'
+  and model_version = 'v1.1-live'
+  and rationale->>'exchange' = 'binance'
 order by symbol, created_at desc;
 
 create view public.public_signal_history as
@@ -59,6 +61,9 @@ select
   sample_size,
   model_version
 from public.radar_signals
+where timeframe = '15m'
+  and model_version = 'v1.1-live'
+  and rationale->>'exchange' = 'binance'
 order by created_at desc
 limit 96;
 
