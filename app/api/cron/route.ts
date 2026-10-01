@@ -10,6 +10,7 @@ export const runtime = 'nodejs'
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']
 const TIMEFRAME = '15m'
 const HISTORY_LIMIT = 250
+const MODEL_VERSION = 'v1.1-live'
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -33,9 +34,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
+  const runId = crypto.randomUUID()
+  const startedAt = Date.now()
+
   try {
     const supabase = getSupabaseAdmin()
-    const results = []
+    const results: Array<Record<string, unknown>> = []
 
     for (const symbol of SYMBOLS) {
       const candles = await fetchBinanceClosedCandles(symbol, TIMEFRAME, HISTORY_LIMIT)
@@ -62,7 +66,7 @@ export async function GET(request: NextRequest) {
       if (snapshotError) throw new Error(`Supabase snapshots ${symbol}: ${snapshotError.message}`)
       if (!snapshots?.length) throw new Error(`No snapshots persisted for ${symbol}`)
 
-      const featureRows = snapshots.map((s: any) => {
+      const featureRows = snapshots.map(s => {
         const candleSet = candles.filter(c => c.openTime <= new Date(s.captured_at).getTime())
         const f = calculateFeatures(candleSet)
         return {
@@ -72,7 +76,7 @@ export async function GET(request: NextRequest) {
           captured_at: s.captured_at,
           ...f,
         }
-      }).filter((r: any) => r.ema_200 !== null)
+      }).filter(r => r.ema_200 !== null)
 
       if (featureRows.length) {
         const { error: featureError } = await supabase
@@ -81,13 +85,13 @@ export async function GET(request: NextRequest) {
         if (featureError) throw new Error(`Supabase features ${symbol}: ${featureError.message}`)
       }
 
-      const latest = featureRows.sort((a: any, b: any) =>
+      const latest = featureRows.sort((a, b) =>
         new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime(),
       )[0]
 
       if (!latest) throw new Error(`No usable features for ${symbol}`)
 
-      const latestSnapshot = snapshots.find((s: any) => s.id === latest.snapshot_id)
+      const latestSnapshot = snapshots.find(s => s.id === latest.snapshot_id)
       if (!latestSnapshot) throw new Error(`Missing latest snapshot for ${symbol}`)
 
       const { data: persistedFeature, error: featureLookupError } = await supabase
@@ -105,7 +109,7 @@ export async function GET(request: NextRequest) {
 
       const { error: signalError } = await supabase
         .from('radar_signals')
-        .insert({
+        .upsert({
           snapshot_id: latestSnapshot.id,
           feature_id: persistedFeature.id,
           symbol,
@@ -136,8 +140,8 @@ export async function GET(request: NextRequest) {
             volume_ratio: latest.volume_ratio,
             atr: latest.atr,
           },
-          model_version: 'v1.1-live',
-        })
+          model_version: MODEL_VERSION,
+        }, { onConflict: 'snapshot_id,model_version' })
 
       if (signalError) throw new Error(`Supabase radar signal ${symbol}: ${signalError.message}`)
 
@@ -155,15 +159,24 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      run_id: runId,
+      duration_ms: Date.now() - startedAt,
       exchange: 'binance',
       timeframe: TIMEFRAME,
+      model_version: MODEL_VERSION,
       generated_at: new Date().toISOString(),
       results,
     })
   } catch (error) {
-    console.error('[radar-crypto cron]', error)
+    console.error('[radar-crypto cron]', {
+      run_id: runId,
+      duration_ms: Date.now() - startedAt,
+      error,
+    })
     return NextResponse.json({
       ok: false,
+      run_id: runId,
+      duration_ms: Date.now() - startedAt,
       error: error instanceof Error ? error.message : 'Unknown ingestion error',
     }, { status: 500 })
   }
