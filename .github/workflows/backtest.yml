@@ -1,0 +1,35 @@
+name: Radar historical backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      months:
+        description: 'Months of 15m Binance history'
+        required: false
+        default: '36'
+      symbols:
+        description: 'Comma-separated Binance spot symbols'
+        required: false
+        default: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run exact production-score backtest
+        env:
+          MONTHS: ${{ inputs.months }}
+          SYMBOLS: ${{ inputs.symbols }}
+          FEE_BPS: '10'
+          SLIPPAGE_BPS: '5'
+        run: node scripts/backtest.mjs
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-backtest-report
+          path: backtest-results/
