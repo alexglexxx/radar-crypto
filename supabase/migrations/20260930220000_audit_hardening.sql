@@ -1,7 +1,5 @@
 -- Radar Crypto audit hardening
--- 1) Make signal persistence idempotent.
--- 2) Keep raw research tables private to server-side service_role.
--- 3) Expose only a deliberately limited public projection for the dashboard.
+-- Idempotent signal persistence + controlled public dashboard projections.
 
 with duplicates as (
   select id,
@@ -42,7 +40,10 @@ select distinct on (symbol)
   created_at,
   timeframe,
   sample_size,
-  model_version
+  model_version,
+  (rationale->>'rsi_14')::numeric as rsi_14,
+  (rationale->>'macd_histogram')::numeric as macd_histogram,
+  (rationale->>'volume_ratio')::numeric as volume_ratio
 from public.radar_signals
 where timeframe = '15m'
   and model_version = 'v1.1-live'
