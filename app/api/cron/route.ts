@@ -142,8 +142,22 @@ export async function GET(request: NextRequest) {
           },
           model_version: MODEL_VERSION,
         }, { onConflict: 'snapshot_id,model_version' })
+        .select('id')
+        .single()
 
-      if (signalError) throw new Error(`Supabase radar signal ${symbol}: ${signalError.message}`)
+      if (signalError || !signal?.id) throw new Error(`Supabase radar signal ${symbol}: ${signalError?.message ?? 'missing signal id'}`)
+
+      const { error: publicMetricsError } = await supabase
+        .from('radar_public_metrics')
+        .upsert({
+          signal_id: signal.id,
+          symbol,
+          rsi_14: latest.rsi_14,
+          macd_histogram: latest.macd_histogram,
+          volume_ratio: latest.volume_ratio,
+        }, { onConflict: 'signal_id' })
+
+      if (publicMetricsError) throw new Error(`Supabase public metrics ${symbol}: ${publicMetricsError.message}`)
 
       results.push({
         symbol,
