@@ -8,11 +8,24 @@ export type BinanceCandle = {
   volume: number
 }
 
-// Binance documents data-api.binance.vision as a public market-data
-// endpoint for unauthenticated REST market data, including /api/v3/klines.
-// This avoids routing public market-data requests through api.binance.com,
-// which currently returns HTTP 451 from Vercel's runtime region.
 const BASE_URL = 'https://data-api.binance.vision'
+
+function assertFiniteCandle(candle: BinanceCandle) {
+  const values = [candle.openTime, candle.closeTime, candle.open, candle.high, candle.low, candle.close, candle.volume]
+  if (values.some(value => !Number.isFinite(value))) {
+    throw new Error('Binance returned non-finite kline values')
+  }
+  if (candle.openTime <= 0 || candle.closeTime < candle.openTime) {
+    throw new Error('Binance returned invalid kline timestamps')
+  }
+  if (candle.low <= 0 || candle.high <= 0 || candle.open <= 0 || candle.close <= 0) {
+    throw new Error('Binance returned non-positive OHLC values')
+  }
+  if (candle.high < candle.low || candle.open < candle.low || candle.open > candle.high || candle.close < candle.low || candle.close > candle.high) {
+    throw new Error('Binance returned inconsistent OHLC values')
+  }
+  if (candle.volume < 0) throw new Error('Binance returned negative volume')
+}
 
 export async function fetchBinanceClosedCandles(symbol: string, interval = '15m', limit = 250): Promise<BinanceCandle[]> {
   const url = new URL('/api/v3/klines', BASE_URL)
@@ -30,18 +43,30 @@ export async function fetchBinanceClosedCandles(symbol: string, interval = '15m'
   const rows = (await response.json()) as unknown
   if (!Array.isArray(rows)) throw new Error('Binance klines returned an invalid payload')
 
-  return rows
-    .map((row): BinanceCandle => {
-      if (!Array.isArray(row) || row.length < 7) throw new Error('Binance returned a malformed kline')
-      return {
-        openTime: Number(row[0]),
-        open: Number(row[1]),
-        high: Number(row[2]),
-        low: Number(row[3]),
-        close: Number(row[4]),
-        volume: Number(row[5]),
-        closeTime: Number(row[6]),
-      }
-    })
+  const candles = rows.map((row): BinanceCandle => {
+    if (!Array.isArray(row) || row.length < 7) throw new Error('Binance returned a malformed kline')
+    return {
+      openTime: Number(row[0]),
+      open: Number(row[1]),
+      high: Number(row[2]),
+      low: Number(row[3]),
+      close: Number(row[4]),
+      volume: Number(row[5]),
+      closeTime: Number(row[6]),
+    }
+  })
+
+  candles.forEach(assertFiniteCandle)
+
+  const closed = candles
     .filter(c => c.closeTime <= Date.now())
+    .sort((a, b) => a.openTime - b.openTime)
+
+  for (let i = 1; i < closed.length; i++) {
+    if (closed[i].openTime <= closed[i - 1].openTime) {
+      throw new Error('Binance returned duplicate or unsorted candles')
+    }
+  }
+
+  return closed
 }
