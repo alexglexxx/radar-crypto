@@ -10,6 +10,11 @@ export const runtime = 'nodejs'
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']
 const TIMEFRAME = '15m'
 const HISTORY_LIMIT = 250
+const OUTCOME_HORIZONS = [
+  { name: '15m', ms: 15 * 60 * 1000 },
+  { name: '1h', ms: 60 * 60 * 1000 },
+  { name: '4h', ms: 4 * 60 * 60 * 1000 },
+] as const
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -26,6 +31,100 @@ function isAuthorized(request: NextRequest) {
   const [scheme, ...tokenParts] = authorization.split(/\s+/)
   const token = tokenParts.join(' ')
   return scheme.toLowerCase() === 'bearer' && token === secret
+}
+
+async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabaseAdmin>) {
+  const cutoff = new Date(Date.now() - OUTCOME_HORIZONS[0].ms).toISOString()
+
+  const { data: signals, error: signalError } = await supabase
+    .from('radar_signals')
+    .select('id,symbol,created_at,entry_price,decision')
+    .eq('decision', 'LONG')
+    .lte('created_at', cutoff)
+    .order('created_at', { ascending: true })
+    .limit(200)
+
+  if (signalError) throw new Error(`Supabase outcome signals: ${signalError.message}`)
+  if (!signals?.length) return { evaluated: 0, skipped: 0 }
+
+  let evaluated = 0
+  let skipped = 0
+
+  for (const signal of signals) {
+    const signalTime = new Date(signal.created_at).getTime()
+    const entry = Number(signal.entry_price)
+    if (!Number.isFinite(entry) || entry <= 0) {
+      skipped++
+      continue
+    }
+
+    for (const horizon of OUTCOME_HORIZONS) {
+      const targetTime = new Date(signalTime + horizon.ms).toISOString()
+
+      const { data: existing, error: existingError } = await supabase
+        .from('signal_outcomes')
+        .select('id')
+        .eq('signal_id', signal.id)
+        .eq('horizon', horizon.name)
+        .limit(1)
+
+      if (existingError) throw new Error(`Supabase outcome lookup ${signal.id}/${horizon.name}: ${existingError.message}`)
+      if (existing?.length) continue
+
+      const { data: target, error: targetError } = await supabase
+        .from('market_snapshots')
+        .select('captured_at,source_timestamp,close,high,low')
+        .eq('symbol', signal.symbol)
+        .eq('timeframe', TIMEFRAME)
+        .gte('source_timestamp', targetTime)
+        .order('source_timestamp', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      if (targetError) throw new Error(`Supabase outcome target ${signal.id}/${horizon.name}: ${targetError.message}`)
+      if (!target) continue
+
+      const targetClose = Number(target.close)
+      if (!Number.isFinite(targetClose) || targetClose <= 0) continue
+
+      const { data: path, error: pathError } = await supabase
+        .from('market_snapshots')
+        .select('high,low')
+        .eq('symbol', signal.symbol)
+        .eq('timeframe', TIMEFRAME)
+        .gte('source_timestamp', signal.created_at)
+        .lte('source_timestamp', target.source_timestamp)
+        .order('source_timestamp', { ascending: true })
+
+      if (pathError) throw new Error(`Supabase outcome path ${signal.id}/${horizon.name}: ${pathError.message}`)
+
+      const highs = (path ?? []).map(row => Number(row.high)).filter(Number.isFinite)
+      const lows = (path ?? []).map(row => Number(row.low)).filter(Number.isFinite)
+      const mfe = highs.length ? Math.max(...highs.map(high => (high - entry) / entry)) : null
+      const mae = lows.length ? Math.min(...lows.map(low => (low - entry) / entry)) : null
+      const realizedReturn = (targetClose - entry) / entry
+      const outcome = realizedReturn > 0 ? 'WIN' : realizedReturn < 0 ? 'LOSS' : 'TIMEOUT'
+
+      const { error: insertError } = await supabase
+        .from('signal_outcomes')
+        .insert({
+          signal_id: signal.id,
+          evaluated_at: new Date().toISOString(),
+          horizon: horizon.name,
+          outcome_price: targetClose,
+          realized_return: realizedReturn,
+          realized_r: null,
+          max_favorable_excursion: mfe,
+          max_adverse_excursion: mae,
+          outcome,
+        })
+
+      if (insertError) throw new Error(`Supabase outcome insert ${signal.id}/${horizon.name}: ${insertError.message}`)
+      evaluated++
+    }
+  }
+
+  return { evaluated, skipped }
 }
 
 export async function GET(request: NextRequest) {
@@ -153,11 +252,14 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const outcomes = await evaluateMaturedLongSignals(supabase)
+
     return NextResponse.json({
       ok: true,
       exchange: 'binance',
       timeframe: TIMEFRAME,
       generated_at: new Date().toISOString(),
+      outcomes,
       results,
     })
   } catch (error) {
