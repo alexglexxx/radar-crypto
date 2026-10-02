@@ -1,0 +1,82 @@
+name: Baseline Backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: 'Comma-separated symbols (default: BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT)'
+        required: false
+        default: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+      target_months:
+        description: 'Number of months to backtest (default: 36)'
+        required: false
+        default: '36'
+
+jobs:
+  baseline-backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type checking
+        run: npm run typecheck
+
+      - name: Run baseline backtest
+        run: npx tsx scripts/backtest-baseline.ts
+        env:
+          SYMBOLS: ${{ github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT' }}
+          MONTHS: ${{ github.event.inputs.target_months || '36' }}
+
+      - name: Upload backtest reports
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-reports
+          path: reports/
+          retention-days: 90
+
+      - name: Upload backtest cache
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-cache
+          path: .backtest-cache/
+          retention-days: 30
+
+      - name: Print summary
+        if: success()
+        run: |
+          echo "## Baseline Backtest Completed ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Symbols: ${{ github.event.inputs.symbols || 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Target months: ${{ github.event.inputs.target_months || '36' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Model version: v1.1-live" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Reports" >> $GITHUB_STEP_SUMMARY
+          echo "Reports are available in the artifacts section:" >> $GITHUB_STEP_SUMMARY
+          echo "- backtest-baseline.json" >> $GITHUB_STEP_SUMMARY
+          echo "- backtest-summary.csv" >> $GITHUB_STEP_SUMMARY
+          echo "- backtest-by-symbol.csv" >> $GITHUB_STEP_SUMMARY
+          echo "- backtest-by-horizon.csv" >> $GITHUB_STEP_SUMMARY
+          echo "- backtest-by-score.csv" >> $GITHUB_STEP_SUMMARY
+          echo "- backtest-by-period.csv" >> $GITHUB_STEP_SUMMARY
+
+      - name: Error summary
+        if: failure()
+        run: |
+          echo "## Baseline Backtest Failed ❌" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
