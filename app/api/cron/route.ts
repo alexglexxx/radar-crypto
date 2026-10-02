@@ -10,6 +10,7 @@ export const runtime = 'nodejs'
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']
 const TIMEFRAME = '15m'
 const HISTORY_LIMIT = 250
+const MODEL_VERSION = 'v1.1-live'
 const OUTCOME_HORIZONS = [
   { name: '15m', ms: 15 * 60 * 1000 },
   { name: '1h', ms: 60 * 60 * 1000 },
@@ -27,7 +28,6 @@ function isAuthorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim()
   const authorization = request.headers.get('authorization')?.trim()
   if (!secret || !authorization) return false
-
   const [scheme, ...tokenParts] = authorization.split(/\s+/)
   const token = tokenParts.join(' ')
   return scheme.toLowerCase() === 'bearer' && token === secret
@@ -38,10 +38,11 @@ async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabas
 
   const { data: signals, error: signalError } = await supabase
     .from('radar_signals')
-    .select('id,symbol,created_at,entry_price,decision')
+    .select('id,symbol,signal_timestamp,entry_price,decision,model_version')
     .eq('decision', 'LONG')
-    .lte('created_at', cutoff)
-    .order('created_at', { ascending: true })
+    .eq('model_version', MODEL_VERSION)
+    .lte('signal_timestamp', cutoff)
+    .order('signal_timestamp', { ascending: true })
     .limit(200)
 
   if (signalError) throw new Error(`Supabase outcome signals: ${signalError.message}`)
@@ -51,9 +52,9 @@ async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabas
   let skipped = 0
 
   for (const signal of signals) {
-    const signalTime = new Date(signal.created_at).getTime()
+    const signalTime = new Date(signal.signal_timestamp).getTime()
     const entry = Number(signal.entry_price)
-    if (!Number.isFinite(entry) || entry <= 0) {
+    if (!Number.isFinite(signalTime) || !Number.isFinite(entry) || entry <= 0) {
       skipped++
       continue
     }
@@ -92,7 +93,7 @@ async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabas
         .select('high,low')
         .eq('symbol', signal.symbol)
         .eq('timeframe', TIMEFRAME)
-        .gte('source_timestamp', signal.created_at)
+        .gt('source_timestamp', signal.signal_timestamp)
         .lte('source_timestamp', target.source_timestamp)
         .order('source_timestamp', { ascending: true })
 
@@ -107,7 +108,7 @@ async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabas
 
       const { error: insertError } = await supabase
         .from('signal_outcomes')
-        .insert({
+        .upsert({
           signal_id: signal.id,
           evaluated_at: new Date().toISOString(),
           horizon: horizon.name,
@@ -117,7 +118,7 @@ async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabas
           max_favorable_excursion: mfe,
           max_adverse_excursion: mae,
           outcome,
-        })
+        }, { onConflict: 'signal_id,horizon', ignoreDuplicates: true })
 
       if (insertError) throw new Error(`Supabase outcome insert ${signal.id}/${horizon.name}: ${insertError.message}`)
       evaluated++
@@ -125,6 +126,19 @@ async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabas
   }
 
   return { evaluated, skipped }
+}
+
+async function fetchWithRetry(symbol: string) {
+  let lastError: unknown = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await fetchBinanceClosedCandles(symbol, TIMEFRAME, HISTORY_LIMIT)
+    } catch (error) {
+      lastError = error
+      if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500 * 2 ** (attempt - 1)))
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`Binance failed for ${symbol}`)
 }
 
 export async function GET(request: NextRequest) {
@@ -137,7 +151,7 @@ export async function GET(request: NextRequest) {
     const results = []
 
     for (const symbol of SYMBOLS) {
-      const candles = await fetchBinanceClosedCandles(symbol, TIMEFRAME, HISTORY_LIMIT)
+      const candles = await fetchWithRetry(symbol)
       if (!candles.length) throw new Error(`No closed candles returned for ${symbol}`)
 
       const rows = candles.map(c => ({
@@ -195,16 +209,14 @@ export async function GET(request: NextRequest) {
         .eq('snapshot_id', latest.snapshot_id)
         .single()
 
-      if (featureLookupError || !persistedFeature) {
-        throw new Error(`Missing persisted feature for ${symbol}`)
-      }
+      if (featureLookupError || !persistedFeature) throw new Error(`Missing persisted feature for ${symbol}`)
 
       const { score, status } = calculateRadarScore(latest)
       const decision = status === 'SETUP LONG' ? 'LONG' : 'WAIT'
 
       const { error: signalError } = await supabase
         .from('radar_signals')
-        .insert({
+        .upsert({
           snapshot_id: latestSnapshot.id,
           feature_id: persistedFeature.id,
           symbol,
@@ -213,6 +225,7 @@ export async function GET(request: NextRequest) {
           signal_score: score,
           decision,
           entry_price: latestSnapshot.close,
+          signal_timestamp: latestSnapshot.source_timestamp,
           stop_price: null,
           target_price: null,
           risk_reward: null,
@@ -235,8 +248,8 @@ export async function GET(request: NextRequest) {
             volume_ratio: latest.volume_ratio,
             atr: latest.atr,
           },
-          model_version: 'v1.1-live',
-        })
+          model_version: MODEL_VERSION,
+        }, { onConflict: 'snapshot_id,model_version' })
 
       if (signalError) throw new Error(`Supabase radar signal ${symbol}: ${signalError.message}`)
 
@@ -258,6 +271,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       exchange: 'binance',
       timeframe: TIMEFRAME,
+      model_version: MODEL_VERSION,
       generated_at: new Date().toISOString(),
       outcomes,
       results,
