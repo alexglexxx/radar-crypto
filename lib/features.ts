@@ -70,6 +70,7 @@ function rsi(values: number[], period: number): number | null {
     avgGain = (avgGain * (period - 1) + gain) / period
     avgLoss = (avgLoss * (period - 1) + loss) / period
   }
+  if (avgLoss === 0 && avgGain === 0) return 50
   if (avgLoss === 0) return 100
   return 100 - (100 / (1 + avgGain / avgLoss))
 }
@@ -95,6 +96,7 @@ function realizedVolatility(values: number[], period: number): number | null {
   const r = returns.slice(-period)
   const mean = r.reduce((a, b) => a + b, 0) / r.length
   const variance = r.reduce((a, b) => a + (b - mean) ** 2, 0) / r.length
+  // 20-bar realized log-return volatility. This is NOT annualized.
   return Math.sqrt(variance) * Math.sqrt(period)
 }
 
