@@ -16,14 +16,15 @@ create policy "public current radar signals" on public.radar_signals
   for select to anon, authenticated
   using (model_version = 'v1.1-live' and created_at >= now() - interval '7 days');
 
--- Grant only the columns needed by the public dashboard.
 grant select (symbol, signal_score, decision, regime, entry_price, created_at, signal_timestamp, timeframe, model_version, sample_size, rationale)
   on public.radar_signals to anon, authenticated;
 
 -- News is intentionally public product content.
-create policy if not exists "public read news briefings" on public.news_briefings
+drop policy if exists "public read news briefings" on public.news_briefings;
+create policy "public read news briefings" on public.news_briefings
   for select to anon, authenticated using (true);
-create policy if not exists "public read news items" on public.news_items
+drop policy if exists "public read news items" on public.news_items;
+create policy "public read news items" on public.news_items
   for select to anon, authenticated using (true);
 grant select on public.news_briefings to anon, authenticated;
 grant select on public.news_items to anon, authenticated;
