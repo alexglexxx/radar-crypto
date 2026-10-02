@@ -10,6 +10,7 @@ const FEEDS = [
   { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
   { name: 'CoinTelegraph', url: 'https://cointelegraph.com/rss' },
 ]
+const DEFAULT_NEWS_MODEL = 'gpt-6-luna'
 
 function admin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -115,11 +116,15 @@ const schema = {
 async function analyze(candidates: Candidate[]) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('Missing OPENAI_API_KEY')
+  const model = process.env.NEWS_AI_MODEL || DEFAULT_NEWS_MODEL
   const payload = candidates.map((x, i) => ({ index: i, source: x.source, title: x.title, description: x.description, published_at: x.publishedAt }))
+
   const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+    method: 'POST',
+    signal: AbortSignal.timeout(30000),
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: process.env.NEWS_AI_MODEL || 'gpt-5.6-luna',
+      model,
       input: [
         { role: 'system', content: 'Eres News Intelligence de Radar Crypto. Analiza SOLO noticias relevantes para BTC, ETH, SOL y XRP. No inventes hechos. Resume en español claro y corto. Diferencia hecho de interpretación. La ventana temporal es una estimación, no una predicción de precio. Una noticia macro puede afectar las cuatro. Elige solo las 5 a 7 noticias de mayor relevancia; elimina duplicados y ruido. relevance_score mide relevancia para nuestro universo, no probabilidad de subida. confidence mide confianza en la clasificación.' },
         { role: 'user', content: `Noticias candidatas de las últimas 36 horas:\n${JSON.stringify(payload)}` }
@@ -130,8 +135,12 @@ async function analyze(candidates: Candidate[]) {
   if (!response.ok) throw new Error(`OpenAI ${response.status}: ${(await response.text()).slice(0, 300)}`)
   const json = await response.json()
   const text = json.output_text
-  if (!text) throw new Error('OpenAI returned no output_text')
-  return JSON.parse(text)
+  if (typeof text !== 'string' || !text.trim()) throw new Error('OpenAI returned no output_text')
+  try {
+    return { analysis: JSON.parse(text), model }
+  } catch {
+    throw new Error('OpenAI returned invalid structured JSON')
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -144,19 +153,18 @@ export async function GET(request: NextRequest) {
 
     const candidates = await collectNews()
     if (!candidates.length) throw new Error('No relevant crypto news found for BTC/ETH/SOL/XRP')
-    const analysis = await analyze(candidates)
+    const { analysis, model } = await analyze(candidates)
     const selected = analysis.items.filter((x: any) => candidates[x.source_index]).sort((a: any, b: any) => b.relevance_score - a.relevance_score).slice(0, 7)
-    const { data: briefing, error: briefingError } = await supabase.from('news_briefings').insert({ briefing_date: today, title: `Crypto Daily — ${today}`, intro: analysis.intro, market_read: analysis.market_read, risk_read: analysis.risk_read, model_version: process.env.NEWS_AI_MODEL || 'gpt-5.6-luna', item_count: selected.length }).select().single()
+    const { data: briefing, error: briefingError } = await supabase.from('news_briefings').insert({ briefing_date: today, title: `Crypto Daily — ${today}`, intro: analysis.intro, market_read: analysis.market_read, risk_read: analysis.risk_read, model_version: model, item_count: selected.length }).select().single()
     if (briefingError || !briefing) throw new Error(briefingError?.message || 'Could not create briefing')
 
     const rows = selected.map((x: any, rank: number) => {
       const source = candidates[x.source_index]
-      const confirmation = 'pending'
-      return { briefing_id: briefing.id, source: source.source, url: source.url, title: source.title, published_at: source.publishedAt, summary: x.summary, why_it_matters: x.why_it_matters, impact_direction: x.impact_direction, impact_intensity: x.impact_intensity, impact_start: x.impact_start, primary_window: x.primary_window, persistence_window: x.persistence_window, affected_assets: x.affected_assets, relevance_score: x.relevance_score, confidence: x.confidence, market_confirmation: confirmation, rank: rank + 1 }
+      return { briefing_id: briefing.id, source: source.source, url: source.url, title: source.title, published_at: source.publishedAt, summary: x.summary, why_it_matters: x.why_it_matters, impact_direction: x.impact_direction, impact_intensity: x.impact_intensity, impact_start: x.impact_start, primary_window: x.primary_window, persistence_window: x.persistence_window, affected_assets: x.affected_assets, relevance_score: x.relevance_score, confidence: x.confidence, market_confirmation: 'pending', rank: rank + 1 }
     })
     const { error: itemError } = await supabase.from('news_items').insert(rows)
     if (itemError) throw new Error(itemError.message)
-    return NextResponse.json({ ok: true, briefing: { ...briefing, item_count: rows.length }, candidates: candidates.length })
+    return NextResponse.json({ ok: true, briefing: { ...briefing, item_count: rows.length }, candidates: candidates.length, model })
   } catch (error) {
     console.error('[daily-news]', error)
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
