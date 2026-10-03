@@ -668,7 +668,7 @@ async function main() {
       best_10: top10,
       worst_10: worst10,
     },
-    by_split,
+    by_split: bySplit,
     issues: {
       MODEL_ISSUES_FOUND: [
         'calculateFeatures() hardcodes return_5m to null, so the 5m feature is absent even though the FeatureSet type exposes it.',
