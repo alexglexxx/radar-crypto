@@ -240,7 +240,7 @@ function calcStdDev(values: number[]): number | null {
 function calcSharpe(values: number[]): number | null {
   if (!values.length) return null
   const std = calcStdDev(values)
-  if (!Number.isFinite(std) || std === 0) return null
+  if (std === null || !Number.isFinite(std) || std === 0) return null
   const mean = values.reduce((a, b) => a + b, 0) / values.length
   return (mean / std) * Math.sqrt(values.length)
 }
