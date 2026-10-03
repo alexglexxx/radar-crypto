@@ -296,7 +296,7 @@ function buildSummary(signalRecords: SignalRecord[], horizon: HorizonName, scena
       ? r.returnByHorizon[horizon]
       : scenarioLabel === 'FEE'
         ? (r.returnByHorizon[horizon] === null ? null : applyFee(r.returnByHorizon[horizon]!, FEE_BPS, 0))
-        : (r.returnByHorizon[horizon] === null ? null : applyFee(r.returnByHorizon[horizon]!, FEE_BPS, SLIPPAGE_BPS)))
+        : (r.returnByHorizon[horizon] === null ? null : applyFee(r.returnByHorizon[horizon]!, FEE_BPS, SLIPPAGE_BPS))))
     .filter((v): v is number => Number.isFinite(v))
 
   const metrics = computeStatsByValues(values)
