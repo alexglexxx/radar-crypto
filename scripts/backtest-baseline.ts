@@ -332,7 +332,7 @@ function computeMetricsFromReturns(values: number[]): SummaryMetrics {
 // DATA DOWNLOAD & PARSING
 // ============================================================================
 
-async function downloadMonth(symbol: string, monthKey: string): Promise<string> {
+async function downloadMonth(symbol: string, monthKey: string): Promise<string | null> {
   const file = path.join(DATA_DIR, `${symbol}-${INTERVAL}-${monthKey}.zip`)
   try {
     await fs.access(file)
@@ -341,6 +341,10 @@ async function downloadMonth(symbol: string, monthKey: string): Promise<string> 
 
   const url = `https://data.binance.vision/data/spot/monthly/klines/${symbol}/${INTERVAL}/${symbol}-${INTERVAL}-${monthKey}.zip`
   const res = await fetch(url)
+  if (res.status === 404) {
+    console.warn(`[backtest] Binance archive unavailable (404), skipping ${symbol} ${monthKey}`)
+    return null
+  }
   if (!res.ok) throw new Error(`Binance archive ${res.status}: ${url}`)
   const bytes = Buffer.from(await res.arrayBuffer())
   await fs.mkdir(DATA_DIR, { recursive: true })
@@ -388,6 +392,7 @@ async function loadSymbol(symbol: string, startMs: number, endMs: number): Promi
 
   for (const monthKey of months) {
     const zipFile = await downloadMonth(symbol, monthKey)
+    if (!zipFile) continue
     const monthCandles = await unzipCsv(zipFile)
     candles.push(...monthCandles)
   }
