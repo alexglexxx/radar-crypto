@@ -419,7 +419,7 @@ async function main() {
       const { score, status } = calculateRadarScore(features)
       if (status !== 'SETUP LONG') continue
 
-      const signalTimestamp = new Date(candle.closeTime ?? candle.openTime).toISOString()
+      const signalTimestamp = new Date(candle.openTime + 15 * 60 * 1000).toISOString()
       const entryPrice = candle.close
       const entryTime = new Date(candle.openTime).toISOString()
       const asOf = new Date(signalTimestamp)
