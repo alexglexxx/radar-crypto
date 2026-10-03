@@ -841,8 +841,8 @@ async function runBacktest(): Promise<BacktestReport> {
     regime_analysis: regimeAnalysis,
     signal_distribution: {
       percentiles,
-      best_10,
-      worst_10,
+      best_10: best10,
+      worst_10: worst10,
     },
     integrity_checks: integrityChecks,
   }
