@@ -512,33 +512,37 @@ async function main() {
   const scoreRows = buildBucketRows(allSignals, 'RAW')
   const periodRows = buildPeriodRows(allSignals, 'RAW')
 
-  const monthlyRows = [...new Map([...Array.from(new Set(allSignals.map(r => r.monthKey)))]
-    .map(monthKey => {
-      const subset = allSignals.filter(r => r.monthKey === monthKey)
-      const values = subset.map(r => r.returnByHorizon['15m']).filter((v): v is number => Number.isFinite(v))
-      return [monthKey, {
-        period: monthKey,
-        signals: subset.length,
-        win_rate: values.length ? values.filter(v => v > 0).length / values.length : null,
-        average_return: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
-        cumulative_return: cumulativeReturn(values),
-        drawdown: maxDrawdown(values),
-      }]
-    }))]
+  const monthlyRows = Array.from(new Map(
+    Array.from(new Set(allSignals.map(r => r.monthKey)))
+      .map(monthKey => {
+        const subset = allSignals.filter(r => r.monthKey === monthKey)
+        const values = subset.map(r => r.returnByHorizon['15m']).filter((v): v is number => Number.isFinite(v))
+        return [monthKey, {
+          period: monthKey,
+          signals: subset.length,
+          win_rate: values.length ? values.filter(v => v > 0).length / values.length : null,
+          average_return: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
+          cumulative_return: cumulativeReturn(values),
+          drawdown: maxDrawdown(values),
+        }] as const
+      })
+  ).values())
 
-  const quarterlyRows = [...new Map([...new Set(allSignals.map(r => r.quarterKey))]
-    .map(quarterKey => {
-      const subset = allSignals.filter(r => r.quarterKey === quarterKey)
-      const values = subset.map(r => r.returnByHorizon['15m']).filter((v): v is number => Number.isFinite(v))
-      return [quarterKey, {
-        period: quarterKey,
-        signals: subset.length,
-        win_rate: values.length ? values.filter(v => v > 0).length / values.length : null,
-        average_return: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
-        cumulative_return: cumulativeReturn(values),
-        drawdown: maxDrawdown(values),
-      }]
-    }))]
+  const quarterlyRows = Array.from(new Map(
+    Array.from(new Set(allSignals.map(r => r.quarterKey)))
+      .map(quarterKey => {
+        const subset = allSignals.filter(r => r.quarterKey === quarterKey)
+        const values = subset.map(r => r.returnByHorizon['15m']).filter((v): v is number => Number.isFinite(v))
+        return [quarterKey, {
+          period: quarterKey,
+          signals: subset.length,
+          win_rate: values.length ? values.filter(v => v > 0).length / values.length : null,
+          average_return: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
+          cumulative_return: cumulativeReturn(values),
+          drawdown: maxDrawdown(values),
+        }] as const
+      })
+  ).values())
 
   const bySplit = [
     { name: 'TRAIN', records: allSignals.filter(r => r.trainValidationTest === 'TRAIN') },
