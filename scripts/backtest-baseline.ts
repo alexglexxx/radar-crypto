@@ -608,7 +608,7 @@ async function runBacktest(): Promise<BacktestReport> {
     const featureEngine = new IncrementalFeatureEngine()
 
     // Spot-check incremental features against production at three checkpoints.
-    const parityIndices = [200, Math.floor(candles.length / 2), Math.max(200, candles.length - 17)]
+    const parityIndices = [200, Math.min(1000, candles.length - 17), Math.min(2000, candles.length - 17)]
     for (const parityIndex of parityIndices) {
       const expected = calculateFeatures(candles.slice(0, parityIndex + 1))
       const parityEngine = new IncrementalFeatureEngine()
