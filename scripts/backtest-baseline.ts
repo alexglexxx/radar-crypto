@@ -293,8 +293,8 @@ function getOutcomeCategory(ret: number | null): 'WIN' | 'LOSS' | 'TIMEOUT' | nu
   return 'TIMEOUT'
 }
 
-function toCsvRow(obj: Record<string, string | number | null | undefined>) {
-  return Object.values(obj)
+function toCsvRow(row: Array<string | number | null | undefined>) {
+  return row
     .map(v => {
       if (v === null || v === undefined) return ''
       const s = String(v)
