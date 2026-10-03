@@ -15,24 +15,26 @@ on:
 jobs:
   backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
       - name: Install dependencies
         run: npm install
-      - name: Run exact production-score backtest
+      - name: Typecheck benchmark
+        run: npm run typecheck
+      - name: Run quantitative baseline
         env:
           MONTHS: ${{ inputs.months }}
           SYMBOLS: ${{ inputs.symbols }}
           FEE_BPS: '10'
           SLIPPAGE_BPS: '5'
-        run: npm run backtest
-      - name: Upload report
+        run: npx tsx scripts/backtest-baseline.ts
+      - name: Upload benchmark reports
         uses: actions/upload-artifact@v4
         with:
           name: radar-backtest-report
-          path: backtest-results/
+          path: reports/
+          if-no-files-found: error
