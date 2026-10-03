@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { calculateFeatures, type Candle } from '../lib/features'
+import { calculateFeatures, type Candle, type FeatureSet } from '../lib/features'
 import { calculateRadarScore } from '../lib/scoring'
 
 const exec = promisify(execFile)
@@ -403,6 +403,169 @@ async function loadSymbol(symbol: string, startMs: number, endMs: number): Promi
 }
 
 // ============================================================================
+// INCREMENTAL FEATURE ENGINE
+// ============================================================================
+//
+// Mirrors lib/features.ts while maintaining rolling state. Benchmark-only;
+// production feature/scoring code is unchanged.
+
+class IncrementalFeatureEngine {
+  private readonly emaStates = new Map<number, { count: number; sum: number; value: number | null }>()
+  private readonly rsiPeriod = 14
+  private rsiCount = 0
+  private rsiGains = 0
+  private rsiLosses = 0
+  private avgGain: number | null = null
+  private avgLoss: number | null = null
+  private readonly volumePeriod = 20
+  private volumeQueue: number[] = []
+  private volumeSum = 0
+  private readonly atrPeriod = 14
+  private trQueue: number[] = []
+  private trSum = 0
+  private previousClose: number | null = null
+  private readonly volatilityPeriod = 20
+  private logReturnQueue: number[] = []
+  private logReturnSum = 0
+  private logReturnSumSq = 0
+  private readonly macdSignalPeriod = 9
+  private macdSignalState = { count: 0, sum: 0, value: null as number | null }
+  private closeHistory: number[] = []
+
+  private updateEma(period: number, value: number): number | null {
+    const state = this.emaStates.get(period) ?? { count: 0, sum: 0, value: null }
+    state.count += 1
+    if (state.count <= period) {
+      state.sum += value
+      if (state.count === period) state.value = state.sum / period
+    } else if (state.value !== null) {
+      const k = 2 / (period + 1)
+      state.value = value * k + state.value * (1 - k)
+    }
+    this.emaStates.set(period, state)
+    return state.value
+  }
+
+  private updateMacdSignal(macd: number | null): number | null {
+    if (macd === null) return null
+    const state = this.macdSignalState
+    state.count += 1
+    if (state.count <= this.macdSignalPeriod) {
+      state.sum += macd
+      if (state.count === this.macdSignalPeriod) state.value = state.sum / this.macdSignalPeriod
+    } else if (state.value !== null) {
+      const k = 2 / (this.macdSignalPeriod + 1)
+      state.value = macd * k + state.value * (1 - k)
+    }
+    return state.value
+  }
+
+  update(candle: Candle): FeatureSet {
+    const close = candle.close
+    this.closeHistory.push(close)
+
+    const ema20 = this.updateEma(20, close)
+    const ema50 = this.updateEma(50, close)
+    const ema200 = this.updateEma(200, close)
+    const ema12 = this.updateEma(12, close)
+    const ema26 = this.updateEma(26, close)
+    const trendStrength = ema20 !== null && ema50 !== null && ema50 !== 0 ? (ema20 / ema50) - 1 : null
+
+    this.volumeQueue.push(candle.volume)
+    this.volumeSum += candle.volume
+    if (this.volumeQueue.length > this.volumePeriod) this.volumeSum -= this.volumeQueue.shift()!
+    const volumeSma = this.volumeQueue.length === this.volumePeriod ? this.volumeSum / this.volumePeriod : null
+    const volumeRatio = volumeSma !== null && volumeSma > 0 ? candle.volume / volumeSma : null
+
+    const macd = ema12 !== null && ema26 !== null ? ema12 - ema26 : null
+    const macdSignal = this.updateMacdSignal(macd)
+    const macdHistogram = macd !== null && macdSignal !== null ? macd - macdSignal : null
+
+    let rsi14: number | null = null
+    if (this.previousClose !== null) {
+      const change = close - this.previousClose
+      if (this.rsiCount < this.rsiPeriod) {
+        this.rsiCount += 1
+        if (change >= 0) this.rsiGains += change
+        else this.rsiLosses -= change
+        if (this.rsiCount === this.rsiPeriod) {
+          this.avgGain = this.rsiGains / this.rsiPeriod
+          this.avgLoss = this.rsiLosses / this.rsiPeriod
+        }
+      } else if (this.avgGain !== null && this.avgLoss !== null) {
+        const gain = Math.max(change, 0)
+        const loss = Math.max(-change, 0)
+        this.avgGain = (this.avgGain * (this.rsiPeriod - 1) + gain) / this.rsiPeriod
+        this.avgLoss = (this.avgLoss * (this.rsiPeriod - 1) + loss) / this.rsiPeriod
+      }
+    }
+    if (this.avgGain !== null && this.avgLoss !== null) {
+      if (this.avgLoss === 0 && this.avgGain === 0) rsi14 = 50
+      else if (this.avgLoss === 0) rsi14 = 100
+      else rsi14 = 100 - (100 / (1 + this.avgGain / this.avgLoss))
+    }
+
+    let atr14: number | null = null
+    if (this.previousClose !== null) {
+      const tr = Math.max(
+        candle.high - candle.low,
+        Math.abs(candle.high - this.previousClose),
+        Math.abs(candle.low - this.previousClose)
+      )
+      this.trQueue.push(tr)
+      this.trSum += tr
+      if (this.trQueue.length > this.atrPeriod) this.trSum -= this.trQueue.shift()!
+      if (this.trQueue.length === this.atrPeriod) atr14 = this.trSum / this.atrPeriod
+    }
+
+    let volatility: number | null = null
+    if (this.previousClose !== null && this.previousClose > 0 && close > 0) {
+      const lr = Math.log(close / this.previousClose)
+      this.logReturnQueue.push(lr)
+      this.logReturnSum += lr
+      this.logReturnSumSq += lr * lr
+      if (this.logReturnQueue.length > this.volatilityPeriod) {
+        const removed = this.logReturnQueue.shift()!
+        this.logReturnSum -= removed
+        this.logReturnSumSq -= removed * removed
+      }
+      if (this.logReturnQueue.length === this.volatilityPeriod) {
+        const mean = this.logReturnSum / this.volatilityPeriod
+        const variance = Math.max(0, this.logReturnSumSq / this.volatilityPeriod - mean * mean)
+        volatility = Math.sqrt(variance) * Math.sqrt(this.volatilityPeriod)
+      }
+    }
+
+    const returnFrom = (barsBack: number): number | null => {
+      if (this.closeHistory.length <= barsBack) return null
+      const then = this.closeHistory[this.closeHistory.length - 1 - barsBack]
+      return then > 0 ? (close / then) - 1 : null
+    }
+
+    this.previousClose = close
+    return {
+      return_5m: null,
+      return_15m: returnFrom(1),
+      return_1h: returnFrom(4),
+      return_4h: returnFrom(16),
+      return_24h: returnFrom(96),
+      ema_20: ema20,
+      ema_50: ema50,
+      ema_200: ema200,
+      trend_strength: trendStrength,
+      rsi_14: rsi14,
+      macd,
+      macd_signal: macdSignal,
+      macd_histogram: macdHistogram,
+      volume_sma: volumeSma,
+      volume_ratio: volumeRatio,
+      volatility,
+      atr: atr14,
+    }
+  }
+}
+
+// ============================================================================
 // BACKTEST ENGINE
 // ============================================================================
 
@@ -441,17 +604,43 @@ async function runBacktest(): Promise<BacktestReport> {
       continue
     }
 
-    console.log(`[backtest] Processing signals for ${symbol}...`)
+    console.log('[backtest] Processing signals for ' + symbol + '...')
+    const featureEngine = new IncrementalFeatureEngine()
 
-    for (let i = 200; i < candles.length - 16; i++) {
+    // Spot-check incremental features against production at three checkpoints.
+    const parityIndices = [200, Math.floor(candles.length / 2), Math.max(200, candles.length - 17)]
+    for (const parityIndex of parityIndices) {
+      const expected = calculateFeatures(candles.slice(0, parityIndex + 1))
+      const parityEngine = new IncrementalFeatureEngine()
+      let actual: FeatureSet | null = null
+      for (let j = 0; j <= parityIndex; j++) actual = parityEngine.update(candles[j])
+      if (!actual) throw new Error('Feature parity engine produced no result')
+      const fields: (keyof FeatureSet)[] = ['return_15m','return_1h','return_4h','return_24h','ema_20','ema_50','ema_200','trend_strength','rsi_14','macd','macd_signal','macd_histogram','volume_sma','volume_ratio','volatility','atr']
+      for (const field of fields) {
+        const a = actual[field]
+        const e = expected[field]
+        const equal = a === null && e === null
+        const closeEnough = typeof a === 'number' && typeof e === 'number' &&
+          Math.abs(a - e) <= Math.max(1e-12, Math.abs(e) * 1e-10)
+        if (!equal && !closeEnough) {
+          throw new Error('Feature parity mismatch for ' + symbol + ' index ' + parityIndex + ' field ' + field + ': incremental=' + a + ' production=' + e)
+        }
+      }
+    }
+    console.log('[backtest] ' + symbol + ': feature parity checks passed')
+
+    for (let i = 0; i < candles.length; i++) {
       const candle = candles[i]
-      const historical = candles.slice(0, i + 1)
+      const features = featureEngine.update(candle)
 
-      if (historical.length < 200) continue
+      if (i < 200 || i >= candles.length - 16) continue
 
       // PHASE 1: Signal generation (no look-ahead)
-      const features = calculateFeatures(historical)
       const { score, status } = calculateRadarScore(features)
+
+      if (i % 10000 === 0) {
+        console.log('[backtest] ' + symbol + ': processed ' + i.toLocaleString() + '/' + candles.length.toLocaleString() + ' candles')
+      }
 
       // Only process SETUP LONG signals
       if (status !== 'SETUP LONG') continue
@@ -799,7 +988,8 @@ async function runBacktest(): Promise<BacktestReport> {
       slippage_assumption: `Scenario C adds ${SLIPPAGE_BPS_CONSERVATIVE} bps as conservative mid-to-market slippage, representing partial fill at slightly worse prices.`,
       model_version_used: MODEL_VERSION,
       production_functions_imported: [
-        'lib/features.ts: calculateFeatures()',
+        'lib/features.ts: calculateFeatures() (parity spot-checks)',
+        'scripts/backtest-baseline.ts: IncrementalFeatureEngine mirrors calculateFeatures() formulas',
         'lib/scoring.ts: calculateRadarScore()',
       ],
       timestamp_precision:
@@ -811,6 +1001,7 @@ async function runBacktest(): Promise<BacktestReport> {
       methodology_warnings: [
         'Entry price uses close of the signal bar; this is realistic but could experience microfill slippage on market orders.',
         'Outcome measurement assumes the first available candle close at the target horizon; gaps or data anomalies could affect results.',
+        'Incremental feature engine is benchmark-only and validated against production calculateFeatures() at three checkpoints per symbol.'
       ],
     },
     costs: {
