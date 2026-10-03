@@ -352,7 +352,7 @@ function buildPeriodRows(signalRecords: SignalRecord[], scenarioLabel: 'RAW' | '
   }
 
   const rows: PeriodRow[] = []
-  for (const [monthKey, subset] of [...months.entries()].sort()) {
+  for (const [monthKey, subset] of Array.from(months.entries()).sort()) {
     const values = subset
       .map(r => {
         const ret = scenarioLabel === 'RAW'
