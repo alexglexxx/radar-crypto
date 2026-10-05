@@ -1,0 +1,38 @@
+name: Radar score discovery 1h
+
+on:
+  workflow_dispatch:
+    inputs:
+      months:
+        description: 'Months of hourly Binance history'
+        required: false
+        default: '24'
+      symbols:
+        description: 'Comma-separated Binance spot symbols'
+        required: false
+        default: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run 1h discovery screen
+        env:
+          MONTHS: ${{ inputs.months }}
+          SYMBOLS: ${{ inputs.symbols }}
+        run: npx tsx scripts/backtest-discovery.ts
+      - name: Upload discovery reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-score-discovery-1h
+          path: reports/backtest-discovery-1h*
+          if-no-files-found: error
