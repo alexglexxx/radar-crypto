@@ -44,110 +44,26 @@ async function unzip(file:string){
   return out
 }
 
-async function load(symbol:string,start:number,end:number){
-  const months=monthKeys(new Date(start),new Date(end)),out:Candle[]=[],
-    loadedMonths:string[]=[],missingMonths:string[]=[]
-  for(const m of months){
-    const f=await download(symbol,m)
-    if(!f){missingMonths.push(m);continue}
-    const rows=await unzip(f)
-    if(rows.length)loadedMonths.push(m)
-    out.push(...rows)
-  }
-  const filtered=out.filter(c=>c.openTime>=start&&c.openTime<=end).sort((a,b)=>a.openTime-b.openTime)
-  return{candles:filtered,requestedMonths:months,loadedMonths,missingMonths}
-}
+async function load(symbol:string,start:number,end:number){const months=monthKeys(new Date(start),new Date(end)),out:Candle[]=[],loadedMonths:string[]=[],missingMonths:string[]=[];for(const m of months){const f=await download(symbol,m);if(!f){missingMonths.push(m);continue}const rows=await unzip(f);if(rows.length)loadedMonths.push(m);out.push(...rows)}const filtered=out.filter(c=>c.openTime>=start&&c.openTime<=end).sort((a,b)=>a.openTime-b.openTime);return{candles:filtered,requestedMonths:months,loadedMonths,missingMonths}}
 
-function emaSeries(a:number[],n:number){
-  const out:(number|null)[]=Array(a.length).fill(null)
-  if(a.length<n)return out
-  let x=a.slice(0,n).reduce((p,q)=>p+q,0)/n
-  out[n-1]=x
-  const k=2/(n+1)
-  for(let i=n;i<a.length;i++){x=a[i]*k+x*(1-k);out[i]=x}
-  return out
-}
+function emaSeries(a:number[],n:number){const out:(number|null)[]=Array(a.length).fill(null);if(a.length<n)return out;let x=a.slice(0,n).reduce((p,q)=>p+q,0)/n;out[n-1]=x;const k=2/(n+1);for(let i=n;i<a.length;i++){x=a[i]*k+x*(1-k);out[i]=x}return out}
+function smaSeries(a:number[],n:number){const out:(number|null)[]=Array(a.length).fill(null);let sum=0;for(let i=0;i<a.length;i++){sum+=a[i];if(i>=n)sum-=a[i-n];if(i>=n-1)out[i]=sum/n}return out}
+function rsiSeries(a:number[],n=14){const out:(number|null)[]=Array(a.length).fill(null);if(a.length<=n)return out;let g=0,l=0;for(let i=1;i<=n;i++){const d=a[i]-a[i-1];if(d>=0)g+=d;else l-=d}let ag=g/n,al=l/n;const value=()=>al===0?(ag===0?50:100):100-100/(1+ag/al);out[n]=value();for(let i=n+1;i<a.length;i++){const d=a[i]-a[i-1];ag=(ag*(n-1)+Math.max(d,0))/n;al=(al*(n-1)+Math.max(-d,0))/n;out[i]=value()}return out}
+function atrSeries(c:Candle[],n=14){const x:number[]=Array(c.length).fill(0);for(let i=1;i<c.length;i++)x[i]=Math.max(c[i].high-c[i].low,Math.abs(c[i].high-c[i-1].close),Math.abs(c[i].low-c[i-1].close));return smaSeries(x,n)}
+function realizedVolSeries(a:number[],n=20){const out:(number|null)[]=Array(a.length).fill(null),r:number[]=Array(a.length).fill(0);for(let i=1;i<a.length;i++)r[i]=a[i-1]>0&&a[i]>0?Math.log(a[i]/a[i-1]):0;for(let i=n;i<a.length;i++){let sum=0;for(let j=i-n+1;j<=i;j++)sum+=r[j];const m=sum/n;let ss=0;for(let j=i-n+1;j<=i;j++)ss+=(r[j]-m)**2;out[i]=Math.sqrt(ss/n)*Math.sqrt(n)}return out}
 
-function smaSeries(a:number[],n:number){
-  const out:(number|null)[]=Array(a.length).fill(null)
-  let sum=0
-  for(let i=0;i<a.length;i++){
-    sum+=a[i]
-    if(i>=n)sum-=a[i-n]
-    if(i>=n-1)out[i]=sum/n
-  }
-  return out
-}
-
-function rsiSeries(a:number[],n=14){
-  const out:(number|null)[]=Array(a.length).fill(null)
-  if(a.length<=n)return out
-  let g=0,l=0
-  for(let i=1;i<=n;i++){const d=a[i]-a[i-1];if(d>=0)g+=d;else l-=d}
-  let ag=g/n,al=l/n
-  const value=()=>al===0?(ag===0?50:100):100-100/(1+ag/al)
-  out[n]=value()
-  for(let i=n+1;i<a.length;i++){
-    const d=a[i]-a[i-1]
-    ag=(ag*(n-1)+Math.max(d,0))/n
-    al=(al*(n-1)+Math.max(-d,0))/n
-    out[i]=value()
-  }
-  return out
-}
-
-function atrSeries(c:Candle[],n=14){
-  const x:number[] = Array(c.length).fill(0)
-  for(let i=1;i<c.length;i++)x[i]=Math.max(c[i].high-c[i].low,Math.abs(c[i].high-c[i-1].close),Math.abs(c[i].low-c[i-1].close))
-  return smaSeries(x,n)
-}
-
-function realizedVolSeries(a:number[],n=20){
-  const out:(number|null)[]=Array(a.length).fill(null), r:number[] = Array(a.length).fill(0)
-  for(let i=1;i<a.length;i++)r[i]=a[i-1]>0&&a[i]>0?Math.log(a[i]/a[i-1]):0
-  for(let i=n;i<a.length;i++){
-    let sum=0
-    for(let j=i-n+1;j<=i;j++)sum+=r[j]
-    const m=sum/n
-    let ss=0
-    for(let j=i-n+1;j<=i;j++)ss+=(r[j]-m)**2
-    out[i]=Math.sqrt(ss/n)*Math.sqrt(n)
-  }
-  return out
-}
-
-function scoreAt(i:number,c:Candle[],e20:(number|null)[],e50:(number|null)[],e200:(number|null)[],rsi:(number|null)[],macdHist:(number|null)[],volRatio:(number|null)[],atr:(number|null)[],vol:(number|null)[]){
-  let s=50
-  const e20i=e20[i],e50i=e50[i],e200i=e200[i]
-  if(e20i!==null&&e50i!==null)s+=e20i>e50i?8:-8
-  if(e20i!==null&&e50i!==null){const trend=e20i/e50i-1;s+=trend>=.01?10:trend>=.003?5:trend<=-.01?-10:trend<=-.003?-5:0}
-  const ret=(n:number)=>{const b=c[i-n]?.close;return b>0?c[i].close/b-1:0}
-  s+=Math.max(-5,Math.min(5,ret(1)*500))
-  s+=Math.max(-8,Math.min(8,ret(4)*200))
-  s+=Math.max(-6,Math.min(6,ret(12)*100))
-  s+=Math.max(-6,Math.min(6,ret(24)*50))
-  const vr=volRatio[i]
-  if(vr!==null)s+=vr>=2?10:vr>=1.3?7:vr>=1.05?3:vr<.7?-6:0
-  const mh=macdHist[i]
-  if(mh!==null)s+=mh>0?5:-5
-  const ri=rsi[i]
-  if(ri!==null)s+=ri>=52&&ri<=68?5:(ri>=45&&ri<=72?1:(ri>78?-6:ri<35?-5:0))
-  const at=atr[i]
-  if(at!==null&&e200i!==null&&e200i>0&&at/e200i>.08)s-=5
-  void vol
-  return Math.round(Math.max(0,Math.min(100,s)))
-}
+function scoreAt(i:number,c:Candle[],e20:(number|null)[],e50:(number|null)[],e200:(number|null)[],rsi:(number|null)[],macdHist:(number|null)[],volRatio:(number|null)[],atr:(number|null)[],vol:(number|null)[]){let s=50;const e20i=e20[i],e50i=e50[i],e200i=e200[i];if(e20i!==null&&e50i!==null)s+=e20i>e50i?8:-8;if(e20i!==null&&e50i!==null){const trend=e20i/e50i-1;s+=trend>=.01?10:trend>=.003?5:trend<=-.01?-10:trend<=-.003?-5:0}const ret=(n:number)=>{const b=c[i-n]?.close;return b>0?c[i].close/b-1:0};s+=Math.max(-5,Math.min(5,ret(1)*500));s+=Math.max(-8,Math.min(8,ret(4)*200));s+=Math.max(-6,Math.min(6,ret(12)*100));s+=Math.max(-6,Math.min(6,ret(24)*50));const vr=volRatio[i];if(vr!==null)s+=vr>=2?10:vr>=1.3?7:vr>=1.05?3:vr<.7?-6:0;const mh=macdHist[i];if(mh!==null)s+=mh>0?5:-5;const ri=rsi[i];if(ri!==null)s+=ri>=52&&ri<=68?5:(ri>=45&&ri<=72?1:(ri>78?-6:ri<35?-5:0));const at=atr[i];if(at!==null&&e200i!==null&&e200i>0&&at/e200i>.08)s-=5;void vol;return Math.round(Math.max(0,Math.min(100,s)))}
 
 function mean(a:number[]){return a.length?a.reduce((x,y)=>x+y,0)/a.length:null}
 
 async function main(){
   const now=new Date()
   const end=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1)-1)
-  const start=new Date(end)
-  start.setUTCMonth(start.getUTCMonth()-(MONTHS-1))
-  start.setUTCHours(0,0,0,0)
+  // Anchor the start to the first day of the oldest requested month.
+  // Previously this subtracted months from the last day of the end month,
+  // producing 2024-10-30 instead of 2024-10-01 for a 24-month window.
+  const start=new Date(Date.UTC(end.getUTCFullYear(),end.getUTCMonth()-(MONTHS-1),1))
   const rows:any[]=[],coverage:any[]=[]
-
   for(const symbol of SYMBOLS){
     const loaded=await load(symbol,start.getTime(),end.getTime()),c=loaded.candles
     const expected=Math.max(0,Math.floor((end.getTime()-start.getTime())/3600000)+1)
@@ -157,9 +73,6 @@ async function main(){
     coverage.push({symbol,requestedMonths:loaded.requestedMonths.length,loadedMonths:loaded.loadedMonths.length,missingMonths:loaded.missingMonths,expectedHourlyCandles:expected,actualCandles:c.length,coverageRatio:expected?c.length/expected:null,firstCandle:first?new Date(first).toISOString():null,lastCandle:last?new Date(last).toISOString():null,gaps,maxGapHours})
     console.log('[discovery] '+symbol+': '+c.length+' hourly candles | '+(first?new Date(first).toISOString():'N/A')+' -> '+(last?new Date(last).toISOString():'N/A')+' | months '+loaded.loadedMonths.length+'/'+loaded.requestedMonths.length+' | gaps='+gaps+' maxGapHours='+maxGapHours)
     if(c.length<Math.floor(expected*.9))throw new Error('[discovery] Coverage failure for '+symbol+': expected about '+expected+' hourly candles, got '+c.length+' ('+(c.length/expected*100).toFixed(1)+'%). Refusing to publish discovery results.')
-
-    // Precompute all indicator series once. The previous implementation recalculated
-    // the full history for every candle, making the screen O(n²) and exceeding CI's 20m limit.
     const a=c.map(x=>x.close),v=c.map(x=>x.volume)
     const e20=emaSeries(a,20),e50=emaSeries(a,50),e200=emaSeries(a,200),e12=emaSeries(a,12),e26=emaSeries(a,26)
     const macd:(number|null)[]=a.map((_,i)=>e12[i]!==null&&e26[i]!==null?e12[i]! - e26[i]!:null)
@@ -171,7 +84,6 @@ async function main(){
     const volRatio:(number|null)[]=vs.map((x,i)=>x!==null&&x>0?v[i]/x:null)
     for(let i=220;i<c.length-24;i++)rows.push({symbol,time:c[i].openTime,score:scoreAt(i,c,e20,e50,e200,rsi,macdHist,volRatio,atr,rv),r1:c[i+1].close/c[i].close-1,r4:c[i+4].close/c[i].close-1,r12:c[i+12].close/c[i].close-1,r24:c[i+24].close/c[i].close-1})
   }
-
   const defs=[[0,39,'0-39'],[40,49,'40-49'],[50,59,'50-59'],[60,69,'60-69'],[70,79,'70-79'],[80,100,'80-100']]
   const byScore=defs.map(([lo,hi,bucket])=>{const x=rows.filter(r=>r.score>=lo&&r.score<=hi),n=x.length;return{bucket,signals:n,winRate4h:n?x.filter(r=>r.r4>COST).length/n:null,avg1h:mean(x.map(r=>r.r1)),avg4hNet:mean(x.map(r=>r.r4-COST)),avg12h:mean(x.map(r=>r.r12)),avg24h:mean(x.map(r=>r.r24))}})
   const high=rows.filter(r=>r.score>=70),low=rows.filter(r=>r.score<50)
