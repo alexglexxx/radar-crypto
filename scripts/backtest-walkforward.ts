@@ -39,8 +39,40 @@ async function main(){
   ['2025-04-01','2026-04-01','2026-04-01','2026-07-01'],
   ['2025-07-01','2026-07-01','2026-07-01','2026-10-01']
  ]
- const thresholds=[60,65,70,75,80,85,90],results:any[]=[]
- for(let k=0;k<folds.length;k++){const [tr0,tr1,te0,te1]=folds[k];const train=all.filter(o=>o.time>=Date.parse(tr0+'T00:00:00Z')&&o.time<Date.parse(tr1+'T00:00:00Z'));const test=all.filter(o=>o.time>=Date.parse(te0+'T00:00:00Z')&&o.time<Date.parse(te1+'T00:00:00Z'));const trainStats=thresholds.map(t=>stats(train,t)).filter(s=>s.trades>=100).sort((a,b)=>{const e=(b.expectancy??-1e9)-(a.expectancy??-1e9);return e||((b.profitFactor??-1)-(a.profitFactor??-1))});const selected=trainStats[0]?.threshold??70;const oos=stats(test,selected),oosNonOverlap=nonOverlapping(test,selected);results.push({fold:k+1,train:tr0+'..'+tr1,test:te0+'..'+te1,selectedThreshold:selected,trainBest:trainStats[0]??null,test:oos,testNonOverlapping:oosNonOverlap,fixed70:stats(test,70),fixed80:stats(test,80)});console.log('[walkforward] fold '+(k+1)+' train best='+selected+' | OOS trades='+oos.trades+' win='+fmt(oos.winRate)+' exp='+fmt(oos.expectancy)+' | nonOverlap exp='+fmt(oosNonOverlap.expectancy))}
+ const thresholds=[60,65,70,75,80,85,90]
+ const results:any[]=[]
+ for(let k=0;k<folds.length;k++){
+  const [tr0,tr1,te0,te1]=folds[k]
+  const trainStart=Date.parse(tr0+'T00:00:00Z')
+  const trainEnd=Date.parse(tr1+'T00:00:00Z')
+  const testStart=Date.parse(te0+'T00:00:00Z')
+  const testEnd=Date.parse(te1+'T00:00:00Z')
+  const train=all.filter(o=>o.time>=trainStart&&o.time<trainEnd)
+  const test=all.filter(o=>o.time>=testStart&&o.time<testEnd)
+  const trainStats=thresholds
+   .map(threshold=>stats(train,threshold))
+   .filter(s=>s.trades>=100)
+   .sort((a,b)=>{
+    const expectancy=(b.expectancy??-1e9)-(a.expectancy??-1e9)
+    return expectancy||((b.profitFactor??-1)-(a.profitFactor??-1))
+   })
+  const selectedThreshold=trainStats[0]?.threshold??70
+  const oos=stats(test,selectedThreshold)
+  const oosNonOverlap=nonOverlapping(test,selectedThreshold)
+  const foldResult={
+   fold:k+1,
+   train:tr0+'..'+tr1,
+   test:te0+'..'+te1,
+   selectedThreshold,
+   trainBest:trainStats[0]??null,
+   testStats:oos,
+   testNonOverlapping:oosNonOverlap,
+   fixed70:stats(test,70),
+   fixed80:stats(test,80)
+  }
+  results.push(foldResult)
+  console.log('[walkforward] fold '+(k+1)+' train best='+selectedThreshold+' | OOS trades='+oos.trades+' win='+fmt(oos.winRate)+' exp='+fmt(oos.expectancy)+' | nonOverlap exp='+fmt(oosNonOverlap.expectancy))
+ }
  const selected=results.map(r=>r.selectedThreshold),oos=results.map(r=>r.testNonOverlapping),positive=oos.filter((r:any)=>(r.expectancy??-1)<0===false).length
  const report={report_name:'radar-crypto-walkforward-1h',generated_at:new Date().toISOString(),production_untouched:true,methodology:{train_months:12,test_months:3,thresholds,cost_bps_round_trip:15,threshold_selection:'train-only; highest training expectancy with >=100 observations; OOS never used for selection.',event_study_caveat:'Signals overlap at 1h frequency. testNonOverlapping enforces a 4h cooldown/hold proxy and is the primary OOS diagnostic.',not_deployable:true},coverage,folds:results,summary:{folds:results.length,selectedThresholds:selected,oosNonOverlappingExpectancies:oos.map((r:any)=>r.expectancy),positiveOosFolds:positive}}
  await fs.mkdir(REPORT_DIR,{recursive:true});await fs.writeFile(path.join(REPORT_DIR,'backtest-walkforward-1h.json'),JSON.stringify(report,null,2)+'\n')
