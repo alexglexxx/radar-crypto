@@ -4,7 +4,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import NewsIntelligence from './components/NewsIntelligence'
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+let supabase: ReturnType<typeof createClient> | null = null
+function getSupabase() {
+  if (!supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) throw new Error('Supabase no está configurado')
+    supabase = createClient(url, key)
+  }
+  return supabase
+}
 const MODEL_VERSION = 'v1.1-live'
 
 type Signal = { symbol:string; signal_score:number; decision:'LONG'|'WAIT'; regime:string; entry_price:number|null; created_at:string; signal_timestamp:string|null; timeframe:string; sample_size:number|null; model_version:string; rationale:Record<string,number|string|null>|null }
@@ -16,12 +25,12 @@ export default function Page(){
  async function loadSignals(){
   try{
    setError(null)
-   const{data,error:queryError}=await supabase.from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(120)
+   const{data,error:queryError}=await getSupabase().from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(120)
    if(queryError)throw new Error(queryError.message)
    const latest:Record<string,Signal>={};(data??[]).forEach((row:Signal)=>{if(!latest[row.symbol])latest[row.symbol]=row});const rows=Object.values(latest);setSignals(rows);if(!rows.some(row=>row.symbol===selected)&&rows[0])setSelected(rows[0].symbol);setUpdatedAt(rows[0]?.signal_timestamp??rows[0]?.created_at??null)
   }catch(err){setError(err instanceof Error?err.message:'No se pudieron cargar las señales')}finally{setLoading(false)}
  }
- async function loadHistory(symbol:string){const{data,error:queryError}=await supabase.from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('symbol',symbol).eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(24);if(!queryError&&data)setHistory(data.reverse())}
+ async function loadHistory(symbol:string){const{data,error:queryError}=await getSupabase().from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('symbol',symbol).eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(24);if(!queryError&&data)setHistory(data.reverse())}
  useEffect(()=>{loadSignals();const timer=window.setInterval(loadSignals,60000);return()=>window.clearInterval(timer)},[]);useEffect(()=>{loadHistory(selected)},[selected])
  const current=signals.find(row=>row.symbol===selected)??signals[0];const score=Number(current?.signal_score??0);const meta=statusMeta[current?.regime]??statusMeta.NEUTRAL;const previousScore=history.length>1?Number(history[history.length-2]?.signal_score??score):score;const scoreDelta=score-previousScore;const priceValues=useMemo(()=>history.map(row=>Number(row.entry_price)).filter(Number.isFinite),[history]);const freshness=updatedAt?new Date(updatedAt).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):'—';const stale=updatedAt?Date.now()-new Date(updatedAt).getTime()>20*60*1000:true;const rationale=current?.rationale??{};const volumeRatio=Number(rationale.volume_ratio);const rsi=Number(rationale.rsi_14);const macd=Number(rationale.macd_histogram)
  return <main style={{minHeight:'100vh',background:'#07090b',color:'#f8fafc',fontFamily:'Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif'}}><div style={{maxWidth:1080,margin:'0 auto',padding:'18px 14px 40px'}}>
