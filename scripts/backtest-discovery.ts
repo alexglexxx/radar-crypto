@@ -97,8 +97,6 @@ function rsiSeries(a:number[],n=14){
 }
 
 function atrSeries(c:Candle[],n=14){
-  const tr=(number[])[] // placeholder for type inference
-  void tr
   const x:number[] = Array(c.length).fill(0)
   for(let i=1;i<c.length;i++)x[i]=Math.max(c[i].high-c[i].low,Math.abs(c[i].high-c[i-1].close),Math.abs(c[i].low-c[i-1].close))
   return smaSeries(x,n)
