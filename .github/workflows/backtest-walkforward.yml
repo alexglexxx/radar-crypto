@@ -1,0 +1,38 @@
+name: Radar walk-forward 1h
+on:
+  push:
+    paths:
+      - 'scripts/backtest-walkforward.ts'
+      - '.github/workflows/backtest-walkforward.yml'
+  workflow_dispatch:
+    inputs:
+      months:
+        default: '24'
+        required: false
+      symbols:
+        default: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+        required: false
+jobs:
+  walkforward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run walk-forward
+        env:
+          MONTHS: ${{ inputs.months || '24' }}
+          SYMBOLS: ${{ inputs.symbols || 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT' }}
+        run: npx tsx scripts/backtest-walkforward.ts
+      - name: Upload walk-forward report
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-walkforward-1h
+          path: reports/backtest-walkforward-1h.json
+          if-no-files-found: error
