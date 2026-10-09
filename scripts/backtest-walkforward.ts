@@ -43,7 +43,7 @@ async function main(){
   const a=c.map(x=>x.close),v=c.map(x=>x.volume),e20=emaSeries(a,20),e50=emaSeries(a,50),e200=emaSeries(a,200),e12=emaSeries(a,12),e26=emaSeries(a,26),macd=a.map((_,i)=>e12[i]!==null&&e26[i]!==null?e12[i]! - e26[i]!:null);const mv=macd.filter((x):x is number=>x!==null),sv=emaSeries(mv,9),hist:(number|null)[]=Array(a.length).fill(null);let mi=0;for(let i=0;i<a.length;i++)if(macd[i]!==null){if(sv[mi]!==null)hist[i]=macd[i]! - sv[mi]!;mi++}const vs=smaSeries(v,20),vr=vs.map((x,i)=>x!==null&&x>0?v[i]/x:null),rsi=rsiSeries(a),atr=atrSeries(c,14)
   for(let i=220;i<c.length-24;i++){const atrPct=atr[i]!==null&&c[i].close>0?atr[i]!/c[i].close:null;const trend=e50[i]!==null&&e200[i]!==null?(e50[i]!>e200[i]!*(1.01)?'bull':e50[i]!<e200[i]!*(0.99)?'bear':'sideways'):'sideways';const volatility=atrPct===null?'normal':atrPct<0.004?'low':atrPct>0.012?'high':'normal';all.push({symbol,time:c[i].openTime,score:scoreAt(i,c,e20,e50,e200,rsi,hist,vr,atr),r4:c[i+5].open/c[i+1].open-1,regime:trend,volatility})}
  }
- // Fold boundaries are fixed by calendar dates. Threshold selection is train-only.
+ // Rolling calendar folds are derived from the requested window; threshold selection is train-only.
  const folds=buildFolds(start,MONTHS)
  if(!folds.length)throw new Error('No walk-forward folds could be built from MONTHS='+MONTHS)
  const thresholds=[60,65,70,75,80,85,90]
