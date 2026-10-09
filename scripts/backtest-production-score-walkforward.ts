@@ -250,7 +250,7 @@ async function main() {
   const now = new Date()
   const currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const end = currentMonth.getTime() - INTERVAL_MS
-  const startDate = addMonths(currentMonth, -(MONTHS - 1))
+  const startDate = addMonths(currentMonth, -MONTHS)
   const start = startDate.getTime()
   const allRows: Row[] = []
   const coverage: ReturnType<typeof validateCandles>[] = []
@@ -309,13 +309,17 @@ async function main() {
   const fixedOos = foldResults.map(f => f.oosProductionSetupLong75 as Stats)
   const positiveSelectedFolds = selectedOos.filter(s => (s.expectancy ?? -Infinity) > 0).length
   const positiveFixedFolds = fixedOos.filter(s => (s.expectancy ?? -Infinity) > 0).length
+  const positiveFixedAt25BpsFolds = foldResults.filter(f => (f.costSensitivityAtSelectedThreshold.find((x: any) => x.roundTripCostBps === 25)?.nonOverlappingPerSymbol.expectancy ?? -Infinity) > 0 && f.selectedThreshold === 75).length
+  const enoughOosSamples = fixedOos.every(s => s.trades >= 30)
   const report = {
     reportName: 'radar-crypto-production-score-walkforward-15m',
     generatedAt: new Date().toISOString(),
     qualification: {
-      status: positiveFixedFolds >= Math.ceil(foldResults.length * 0.75) ? 'candidate_for_further_validation' : 'not_qualified',
+      status: positiveFixedFolds >= Math.ceil(foldResults.length * 0.75) && positiveFixedAt25BpsFolds >= Math.ceil(foldResults.length * 0.5) && enoughOosSamples ? 'candidate_for_further_validation' : 'not_qualified',
       note: 'This is a research gate, not proof of profitability. Qualification is based on the unchanged production SETUP LONG threshold of 75, not the train-selected threshold.',
       fixed75PositiveOosFolds: positiveFixedFolds,
+      fixed75PositiveAt25BpsFolds: positiveFixedAt25BpsFolds,
+      everyFoldHasAtLeast30OosTrades: enoughOosSamples,
       totalOosFolds: foldResults.length,
     },
     methodology: {
@@ -337,6 +341,7 @@ async function main() {
     coverage,
     summary: {
       fixed75PositiveOosFolds: positiveFixedFolds,
+      fixed75PositiveAt25BpsFolds: positiveFixedAt25BpsFolds,
       selectedThresholdPositiveOosFolds: positiveSelectedFolds,
       totalOosFolds: foldResults.length,
       fixed75Oos: foldResults.map(f => ({ fold: f.fold, ...f.oosProductionSetupLong75 })),
