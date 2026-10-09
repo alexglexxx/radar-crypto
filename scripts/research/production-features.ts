@@ -153,7 +153,7 @@ export function calculateFeatureSeries(candles: Candle[]): FeatureSet[] {
       volume_sma: volumeSma[i],
       volume_ratio: volumeRatio[i],
       volatility: volatility[i],
-      atr: i <= 14 ? null : atr[i],
+      atr: i < 14 ? null : atr[i],
     }
   })
 }
