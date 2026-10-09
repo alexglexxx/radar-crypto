@@ -290,6 +290,7 @@ async function main() {
       oosOverlappingAtSelectedThreshold: stats(test, PRIMARY_COST_BPS, selectedThreshold),
       oosBySymbolAtSelectedThreshold: bySymbol(test, selectedThreshold, PRIMARY_COST_BPS),
       costSensitivityAtSelectedThreshold: costSensitivity(test, selectedThreshold),
+      oosProductionSetupLong75CostSensitivity: COSTS_BPS.map(costBps => ({ roundTripCostBps: costBps, ...nonOverlapping(test, costBps, 75) })),
       scoreCalibration: scoreBuckets(test, PRIMARY_COST_BPS),
       regimeAt75: ['bull', 'sideways', 'bear'].map(regime => ({
         regime,
@@ -309,7 +310,7 @@ async function main() {
   const fixedOos = foldResults.map(f => f.oosProductionSetupLong75 as Stats)
   const positiveSelectedFolds = selectedOos.filter(s => (s.expectancy ?? -Infinity) > 0).length
   const positiveFixedFolds = fixedOos.filter(s => (s.expectancy ?? -Infinity) > 0).length
-  const positiveFixedAt25BpsFolds = foldResults.filter(f => (f.costSensitivityAtSelectedThreshold.find((x: any) => x.roundTripCostBps === 25)?.nonOverlappingPerSymbol.expectancy ?? -Infinity) > 0 && f.selectedThreshold === 75).length
+  const positiveFixedAt25BpsFolds = foldResults.filter(f => (f.oosProductionSetupLong75CostSensitivity.find((x: any) => x.roundTripCostBps === 25)?.expectancy ?? -Infinity) > 0).length
   const enoughOosSamples = fixedOos.every(s => s.trades >= 30)
   const report = {
     reportName: 'radar-crypto-production-score-walkforward-15m',
