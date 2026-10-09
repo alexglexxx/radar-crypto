@@ -32,7 +32,8 @@ function costSensitivity(x:Obs[],threshold:number){return COSTS_BPS.map(bps=>({c
 function nonOverlapping(x:Obs[],threshold:number,cost=COST){const chosen:Obs[]=[];const bySymbol=new Map<string,Obs[]>();for(const o of x.filter(o=>o.score>=threshold)){const bucket=bySymbol.get(o.symbol)??[];bucket.push(o);bySymbol.set(o.symbol,bucket)}for(const symbolObs of bySymbol.values()){symbolObs.sort((a,b)=>a.time-b.time);let next=0;for(const o of symbolObs){if(o.time<next)continue;chosen.push(o);next=o.time+4*3600000}}chosen.sort((a,b)=>a.time-b.time);return stats(chosen,threshold,cost)}
 function nonOverlappingRows(x:Obs[],threshold:number){const chosen:Obs[]=[];const bySymbol=new Map<string,Obs[]>();for(const o of x.filter(o=>o.score>=threshold)){const bucket=bySymbol.get(o.symbol)??[];bucket.push(o);bySymbol.set(o.symbol,bucket)}for(const symbolObs of bySymbol.values()){symbolObs.sort((a,b)=>a.time-b.time);let next=0;for(const o of symbolObs){if(o.time<next)continue;chosen.push(o);next=o.time+4*3600000}}return chosen.sort((a,b)=>a.time-b.time)}
 
-function fmt(v:number|null){return v===null?'N/A':(v*100).toFixed(3)+'%'}\nasync function main(){
+function fmt(v:number|null){return v===null?'N/A':(v*100).toFixed(3)+'%'}
+async function main(){
  const now=new Date(),end=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1)-1),start=new Date(Date.UTC(end.getUTCFullYear(),end.getUTCMonth()-(MONTHS-1),1))
  const all:Obs[]=[];const coverage:any[]=[]
  for(const symbol of SYMBOLS){const c=await load(symbol,start.getTime(),end.getTime());const expected=Math.floor((end.getTime()-start.getTime())/3600000)+1;let gaps=0;for(let i=1;i<c.length;i++)if((c[i].openTime-c[i-1].openTime)/3600000>1.01)gaps++;coverage.push({symbol,expected,actual:c.length,gaps});if(c.length<expected*.9)throw new Error('Coverage failure '+symbol+' '+c.length+'/'+expected)
