@@ -1,0 +1,42 @@
+name: Radar production-score walk-forward 15m
+
+on:
+  push:
+    branches:
+      - research/production-score-walkforward
+    paths:
+      - 'scripts/backtest-production-score-walkforward.ts'
+      - 'scripts/research/**'
+      - '.github/workflows/backtest-production-score-walkforward.yml'
+      - 'lib/features.ts'
+      - 'lib/scoring.ts'
+  workflow_dispatch:
+
+jobs:
+  production-score-walkforward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test research features against production features
+        run: npx vitest run scripts/research/production-features.test.ts
+      - name: Run production-score walk-forward
+        env:
+          MONTHS: '24'
+          SYMBOLS: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+        run: npx tsx scripts/backtest-production-score-walkforward.ts
+      - name: Upload production-score report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-production-score-walkforward-15m
+          path: reports/backtest-production-score-walkforward-15m.json
+          if-no-files-found: warn
