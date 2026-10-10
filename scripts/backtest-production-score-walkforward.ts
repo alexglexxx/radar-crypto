@@ -2,9 +2,9 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { Candle } from '../../lib/features'
-import { calculateRadarScore } from '../../lib/scoring'
-import { calculateFeatureSeries } from './production-features'
+import type { Candle } from '../lib/features'
+import { calculateRadarScore } from '../lib/scoring'
+import { calculateFeatureSeries } from './research/production-features'
 
 const exec = promisify(execFile)
 const SYMBOLS = (process.env.SYMBOLS ?? 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT').split(',').map(s => s.trim()).filter(Boolean)
