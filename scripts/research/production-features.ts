@@ -148,8 +148,10 @@ export function calculateFeatureSeries(candles: Candle[]): FeatureSet[] {
         : null,
       rsi_14: rsi[i],
       macd: macd[i],
-      macd_signal: macdSignal[i],
-      macd_histogram: macdHist[i],
+      // Production does not expose the signal until the prefix has 35 candles,
+      // even though the seeded EMA-9 value can be calculated one candle earlier.
+      macd_signal: i < 34 ? null : macdSignal[i],
+      macd_histogram: i < 34 ? null : macdHist[i],
       volume_sma: volumeSma[i],
       volume_ratio: volumeRatio[i],
       volatility: volatility[i],
