@@ -111,11 +111,23 @@ function summarize(rows: Observation[], costBps: number) {
 }
 function summarizeComponents(rows: Observation[]) {
   const names: (keyof Component)[] = ['trend', 'momentum', 'volume', 'macd', 'rsi', 'volatility']
+  const conditional = (sample: Observation[], name: keyof Component) => ({
+    observations: sample.length,
+    meanContribution: sample.length ? sample.reduce((sum, row) => sum + row.parts[name], 0) / sample.length : null,
+    at15bps: summarize(sample, 15),
+    costSensitivity: COSTS.map(costBps => ({ costBps, ...summarize(sample, costBps) })),
+  })
   return names.map(name => {
     const positive = rows.filter(r => r.parts[name] > 0)
     const negative = rows.filter(r => r.parts[name] < 0)
     const neutral = rows.filter(r => r.parts[name] === 0)
-    return { component: name, positive: { contributionMean: positive.length ? positive.reduce((s, r) => s + r.parts[name], 0) / positive.length : null, netAt15bps: summarize(positive, 15) }, negative: { contributionMean: negative.length ? negative.reduce((s, r) => s + r.parts[name], 0) / negative.length : null, netAt15bps: summarize(negative, 15) }, neutral: summarize(neutral, 15), caveat: 'Overlapping observations; conditional association, not causal attribution or portfolio returns.' }
+    return {
+      component: name,
+      positive: conditional(positive, name),
+      negative: conditional(negative, name),
+      neutral: conditional(neutral, name),
+      caveat: 'Overlapping observations; conditional association, not causal attribution or portfolio returns.',
+    }
   })
 }
 async function main() {
@@ -150,7 +162,7 @@ async function main() {
     methodology: { researchOnly: true, productionFilesModified: false, horizon: '4h; next candle open entry, open 16 bars later exit', costsBpsRoundTrip: COSTS, scoreFormulaParityCheckedEveryObservation: true, regime: 'EMA50 vs EMA200 with a 1% neutral band', caveat: 'Component grouping is conditional association, not causal contribution. Rows overlap in time and across symbols; metrics are not a portfolio backtest.' },
     configuration: { symbols: SYMBOLS, months: MONTHS, observations: all.length },
     coverage,
-    componentConditionalResults: summarizeComponents(all),
+    componentConditionalResults: { allObservations: summarizeComponents(all), setupLong75: summarizeComponents(all.filter(r => r.score >= 75)) },
     bySymbolAtScore75: SYMBOLS.map(symbol => ({ symbol, at15bps: summarize(all.filter(r => r.symbol === symbol && r.score >= 75), 15), costSensitivity: COSTS.map(cost => ({ costBps: cost, ...summarize(all.filter(r => r.symbol === symbol && r.score >= 75), cost) })) })),
     scoreBucketsAt15bps: buckets.map(b => ({ ...b, ...summarize(all.filter(r => r.score >= b.min && r.score <= b.max), 15), costSensitivity: COSTS.map(cost => ({ costBps: cost, ...summarize(all.filter(r => r.score >= b.min && r.score <= b.max), cost) })) })),
     regimesAtScore75: ['bull', 'sideways', 'bear'].map(regime => ({ regime, at15bps: summarize(all.filter(r => r.regime === regime && r.score >= 75), 15), costSensitivity: COSTS.map(cost => ({ costBps: cost, ...summarize(all.filter(r => r.regime === regime && r.score >= 75), cost) })) })),
