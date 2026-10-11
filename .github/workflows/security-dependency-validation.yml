@@ -6,6 +6,7 @@ on:
       - security/dependency-remediation
     paths:
       - 'package.json'
+      - 'app/page.tsx'
       - '.github/workflows/security-dependency-validation.yml'
   workflow_dispatch:
 
