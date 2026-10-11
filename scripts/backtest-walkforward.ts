@@ -89,3 +89,5 @@ async function main(){
  console.log('[walkforward] positive non-overlap OOS folds='+positive+'/'+results.length)
 }
 main().catch(e=>{console.error('[walkforward] Error:',e);process.exit(1)})
+
+// Research execution marker: timeframe validation run; no production scoring files changed.
