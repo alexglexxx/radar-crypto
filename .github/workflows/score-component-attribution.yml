@@ -27,6 +27,10 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Capture dependency audit without hiding findings
+        run: |
+          mkdir -p reports
+          npm audit --json > reports/npm-audit.json || true
       - name: Typecheck
         run: npm run typecheck
       - name: Verify research feature parity
@@ -36,10 +40,12 @@ jobs:
           MONTHS: '24'
           SYMBOLS: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
         run: npx tsx scripts/research/analyze-score-components.ts
-      - name: Upload score component report
+      - name: Upload research and dependency reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: radar-score-component-attribution-15m
-          path: reports/score-component-attribution-15m.json
+          path: |
+            reports/score-component-attribution-15m.json
+            reports/npm-audit.json
           if-no-files-found: warn
