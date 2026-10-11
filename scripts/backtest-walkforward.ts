@@ -56,8 +56,10 @@ async function main(){
   const trainEnd=Date.parse(tr1+'T00:00:00Z')
   const testStart=Date.parse(te0+'T00:00:00Z')
   const testEnd=Date.parse(te1+'T00:00:00Z')
-  const train=all.filter(o=>o.time>=trainStart&&o.time<trainEnd)
-  const test=all.filter(o=>o.time>=testStart&&o.time<testEnd)
+  const outcomeHorizonMs=5*3600000 // next-open entry, then exit at candle i+5 open
+  // Keep every trade outcome fully inside its own train/OOS window; no boundary leakage.
+  const train=all.filter(o=>o.time>=trainStart&&o.time+outcomeHorizonMs<trainEnd)
+  const test=all.filter(o=>o.time>=testStart&&o.time+outcomeHorizonMs<testEnd)
   const trainStats=thresholds
    .map(threshold=>stats(train,threshold))
    .filter(s=>s.trades>=100)
@@ -77,6 +79,7 @@ async function main(){
    testStats:oos,
    testNonOverlapping:oosNonOverlap,
    fixed70:stats(test,70),
+   fixed75:stats(test,75),
    fixed80:stats(test,80),
    costSensitivity:costSensitivity(test,selectedThreshold),
    perSymbol:perSymbol(test,selectedThreshold)
