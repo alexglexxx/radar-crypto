@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import NewsIntelligence from './components/NewsIntelligence'
 
@@ -22,7 +22,7 @@ function fmtPrice(value:number|null){if(value==null||!Number.isFinite(Number(val
 function scoreColor(score:number){if(score>=75)return'#34d399';if(score>=60)return'#fbbf24';if(score>=45)return'#94a3b8';return'#fb7185'}
 export default function Page(){
  const [signals,setSignals]=useState<Signal[]>([]);const[selected,setSelected]=useState('BTCUSDT');const[history,setHistory]=useState<Signal[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);const[updatedAt,setUpdatedAt]=useState<string|null>(null)
- async function loadSignals(){
+ const loadSignals = useCallback(async () => {
   try{
    setError(null)
    const{data,error:queryError}=await getSupabase().from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(120)
@@ -30,8 +30,9 @@ export default function Page(){
    const latest:Record<string,Signal>={};(data??[]).forEach((row:Signal)=>{if(!latest[row.symbol])latest[row.symbol]=row});const rows=Object.values(latest);setSignals(rows);if(!rows.some(row=>row.symbol===selected)&&rows[0])setSelected(rows[0].symbol);setUpdatedAt(rows[0]?.signal_timestamp??rows[0]?.created_at??null)
   }catch(err){setError(err instanceof Error?err.message:'No se pudieron cargar las señales')}finally{setLoading(false)}
  }
- async function loadHistory(symbol:string){const{data,error:queryError}=await getSupabase().from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('symbol',symbol).eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(24);if(!queryError&&data)setHistory(data.reverse())}
- useEffect(()=>{loadSignals();const timer=window.setInterval(loadSignals,60000);return()=>window.clearInterval(timer)},[]);useEffect(()=>{loadHistory(selected)},[selected])
+ }, [selected])
+ const loadHistory = useCallback(async (symbol:string) => {const{data,error:queryError}=await getSupabase().from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('symbol',symbol).eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(24);if(!queryError&&data)setHistory(data.reverse())}, [])
+ useEffect(()=>{loadSignals();const timer=window.setInterval(loadSignals,60000);return()=>window.clearInterval(timer)},[loadSignals]);useEffect(()=>{loadHistory(selected)},[loadHistory,selected])
  const current=signals.find(row=>row.symbol===selected)??signals[0];const score=Number(current?.signal_score??0);const meta=statusMeta[current?.regime]??statusMeta.NEUTRAL;const previousScore=history.length>1?Number(history[history.length-2]?.signal_score??score):score;const scoreDelta=score-previousScore;const priceValues=useMemo(()=>history.map(row=>Number(row.entry_price)).filter(Number.isFinite),[history]);const freshness=updatedAt?new Date(updatedAt).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):'—';const stale=updatedAt?Date.now()-new Date(updatedAt).getTime()>20*60*1000:true;const rationale=current?.rationale??{};const volumeRatio=Number(rationale.volume_ratio);const rsi=Number(rationale.rsi_14);const macd=Number(rationale.macd_histogram)
  return <main style={{minHeight:'100vh',background:'#07090b',color:'#f8fafc',fontFamily:'Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif'}}><div style={{maxWidth:1080,margin:'0 auto',padding:'18px 14px 40px'}}>
  <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:18}}><div><div style={{display:'flex',alignItems:'center',gap:9}}><div style={{width:11,height:11,borderRadius:999,background:stale?'#fb7185':'#34d399',boxShadow:`0 0 16px ${stale?'rgba(251,113,133,.65)':'rgba(52,211,153,.65)'}`}}/><div style={{fontSize:20,fontWeight:900,letterSpacing:'-.04em'}}>RADAR</div><div style={{fontSize:20,fontWeight:500,color:'#64748b',letterSpacing:'-.04em'}}>CRYPTO</div></div><div style={{color:'#64748b',fontSize:11,marginTop:3}}>MERCADO EN VIVO · 15M · BINANCE</div></div><div style={{textAlign:'right',fontSize:10,color:'#64748b'}}><div style={{color:stale?'#fb7185':'#34d399',fontWeight:800}}>● {stale?'STALE':'LIVE'}</div><div>señal {freshness}</div></div></header>
