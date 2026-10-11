@@ -29,6 +29,8 @@ function equityStats(x:Obs[],threshold:number,cost=COST){const chosen=x.filter(o
 function baselineNonOverlapping(x:Obs[],cost=COST){const rows=nonOverlappingRows(x,0);return equityStats(rows,0,cost)}
 function regimeStats(x:Obs[],threshold:number,cost=COST){const out:any={};for(const regime of ['bull','bear','sideways'])for(const volatility of ['low','normal','high']){const key=regime+'_'+volatility;const rows=x.filter(o=>o.regime===regime&&o.volatility===volatility);out[key]={regime,volatility,n:rows.length,signal:stats(rows,threshold,cost),baseline:stats(rows,0,cost)}}return out}
 function perSymbol(x:Obs[],threshold:number,cost=COST){return SYMBOLS.map(symbol=>({symbol,...stats(x.filter(o=>o.symbol===symbol),threshold,cost),nonOverlapping:nonOverlapping(x.filter(o=>o.symbol===symbol),threshold,cost)}))}
+function applyRegimeGate(x:Obs[],gate:string){return x.filter(o=>{switch(gate){case 'none':return true;case 'bull_only':return o.regime==='bull';case 'avoid_high_vol':return o.volatility!=='high';case 'bull_and_not_high_vol':return o.regime==='bull'&&o.volatility!=='high';case 'bull_or_sideways_low_normal':return (o.regime==='bull'||o.regime==='sideways')&&o.volatility!=='high';default:return false}})}
+const REGIME_GATES=['none','bull_only','avoid_high_vol','bull_and_not_high_vol','bull_or_sideways_low_normal']
 function costSensitivity(x:Obs[],threshold:number){return COSTS_BPS.map(bps=>({cost_bps_round_trip:bps,all:stats(x,threshold,bps/10000),nonOverlapping:nonOverlapping(x,threshold,bps/10000)}))}
 function nonOverlapping(x:Obs[],threshold:number,cost=COST){const chosen:Obs[]=[];const bySymbol=new Map<string,Obs[]>();for(const o of x.filter(o=>o.score>=threshold)){const bucket=bySymbol.get(o.symbol)??[];bucket.push(o);bySymbol.set(o.symbol,bucket)}for(const symbolObs of bySymbol.values()){symbolObs.sort((a,b)=>a.time-b.time);let next=0;for(const o of symbolObs){if(o.time<next)continue;chosen.push(o);next=o.time+4*3600000}}chosen.sort((a,b)=>a.time-b.time);return stats(chosen,threshold,cost)}
 function nonOverlappingRows(x:Obs[],threshold:number){const chosen:Obs[]=[];const bySymbol=new Map<string,Obs[]>();for(const o of x.filter(o=>o.score>=threshold)){const bucket=bySymbol.get(o.symbol)??[];bucket.push(o);bySymbol.set(o.symbol,bucket)}for(const symbolObs of bySymbol.values()){symbolObs.sort((a,b)=>a.time-b.time);let next=0;for(const o of symbolObs){if(o.time<next)continue;chosen.push(o);next=o.time+4*3600000}}return chosen.sort((a,b)=>a.time-b.time)}
@@ -70,6 +72,11 @@ async function main(){
   const selectedThreshold=trainStats[0]?.threshold??70
   const oos=stats(test,selectedThreshold)
   const oosNonOverlap=nonOverlapping(test,selectedThreshold)
+  // Compare a small, predeclared set of regime gates. Choose the gate on training data only.
+  const gateTraining=REGIME_GATES.map(gate=>({gate,...nonOverlapping(applyRegimeGate(train,gate),selectedThreshold)})).filter(x=>x.trades>=100).sort((a,b)=>(b.expectancy??-1e9)-(a.expectancy??-1e9))
+  const selectedGate=gateTraining[0]?.gate??'none'
+  const regimeGateOOS=nonOverlapping(applyRegimeGate(test,selectedGate),selectedThreshold)
+  const fixedGateOOS=REGIME_GATES.map(gate=>({gate,...nonOverlapping(applyRegimeGate(test,gate),selectedThreshold)}))
   const foldResult={
    fold:k+1,
    train:tr0+'..'+tr1,
@@ -77,7 +84,7 @@ async function main(){
    selectedThreshold,
    trainBest:trainStats[0]??null,
    testStats:oos,
-   testNonOverlapping:oosNonOverlap,
+   testNonOverlapping:oosNonOverlap,\n   selectedRegimeGate:selectedGate,\n   trainRegimeGateLeaderboard:gateTraining,\n   regimeGateOOS,\n   fixedGateOOS,
    fixed70:stats(test,70),
    fixed75:stats(test,75),
    fixed80:stats(test,80),
@@ -87,8 +94,8 @@ async function main(){
   results.push(foldResult)
   console.log('[walkforward] fold '+(k+1)+' train best='+selectedThreshold+' | OOS trades='+oos.trades+' win='+fmt(oos.winRate)+' exp='+fmt(oos.expectancy)+' | nonOverlap exp='+fmt(oosNonOverlap.expectancy))
  }
- const selected=results.map(r=>r.selectedThreshold),oos=results.map(r=>r.testNonOverlapping),positive=oos.filter((r:any)=>(r.expectancy??-1)>=0).length
- const report={report_name:'radar-crypto-walkforward-1h',generated_at:new Date().toISOString(),production_untouched:true,methodology:{train_months:12,test_months:3,thresholds,cost_bps_round_trip:15,cost_sensitivity_bps:COSTS_BPS,threshold_selection:'train-only; highest training expectancy with >=100 observations; OOS never used for selection.',event_study_caveat:'Signals overlap at 1h frequency. testNonOverlapping enforces a 4h cooldown/hold proxy independently per symbol and is the primary OOS diagnostic.',baseline_note:'Baseline uses the same next-open-to-4h-open execution model with a 4h per-symbol cooldown; signal trades are non-overlapping per symbol.',execution_model:'Signal evaluated on candle i close; entry at candle i+1 open; hold 4 complete 1h candles; exit at candle i+5 open. No same-candle execution.',regime_model:'Trend: EMA50 vs EMA200 with 1% hysteresis. Volatility: ATR14/close, low <0.4%, normal 0.4%-1.2%, high >1.2%. These labels are descriptive diagnostics, not optimized trading rules.',not_deployable:true},coverage,folds:results,summary:{folds:results.length,selectedThresholds:selected,oosNonOverlappingExpectancies:oos.map((r:any)=>r.expectancy),positiveOosFolds:positive}}
+ const selected=results.map(r=>r.selectedThreshold),oos=results.map(r=>r.testNonOverlapping),positive=oos.filter((r:any)=>(r.expectancy??-1)>=0).length,gateOos=results.map(r=>r.regimeGateOOS),gatePositive=gateOos.filter((r:any)=>(r.expectancy??-1)>=0).length
+ const report={report_name:'radar-crypto-walkforward-1h-regime-gates',generated_at:new Date().toISOString(),production_untouched:true,methodology:{train_months:12,test_months:3,thresholds,cost_bps_round_trip:15,cost_sensitivity_bps:COSTS_BPS,threshold_selection:'train-only; highest training expectancy with >=100 observations; OOS never used for selection.',event_study_caveat:'Signals overlap at 1h frequency. testNonOverlapping enforces a 4h cooldown/hold proxy independently per symbol and is the primary OOS diagnostic.',baseline_note:'Baseline uses the same next-open-to-4h-open execution model with a 4h per-symbol cooldown; signal trades are non-overlapping per symbol.',execution_model:'Signal evaluated on candle i close; entry at candle i+1 open; hold 4 complete 1h candles; exit at candle i+5 open. No same-candle execution.',regime_model:'Trend: EMA50 vs EMA200 with 1% hysteresis. Volatility: ATR14/close, low <0.4%, normal 0.4%-1.2%, high >1.2%. Predeclared gates: none, bull_only, avoid_high_vol, bull_and_not_high_vol, bull_or_sideways_low_normal. Select gate using train-only non-overlapping expectancy with >=100 trades; OOS is evaluation only. Small gate menu still creates selection bias and requires confirmation on later unseen data.',not_deployable:true},coverage,folds:results,summary:{folds:results.length,selectedThresholds:selected,oosNonOverlappingExpectancies:oos.map((r:any)=>r.expectancy),positiveOosFolds:positive,selectedRegimeGates:results.map(r=>r.selectedRegimeGate),regimeGateOosExpectancies:gateOos.map((r:any)=>r.expectancy),positiveRegimeGateOosFolds:gatePositive}}
  await fs.mkdir(REPORT_DIR,{recursive:true});await fs.writeFile(path.join(REPORT_DIR,'backtest-walkforward-1h.json'),JSON.stringify(report,null,2)+'\n')
  console.log('[walkforward] positive non-overlap OOS folds='+positive+'/'+results.length)
 }
