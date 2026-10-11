@@ -29,7 +29,6 @@ export default function Page(){
    if(queryError)throw new Error(queryError.message)
    const latest:Record<string,Signal>={};(data??[]).forEach((row:Signal)=>{if(!latest[row.symbol])latest[row.symbol]=row});const rows=Object.values(latest);setSignals(rows);if(!rows.some(row=>row.symbol===selected)&&rows[0])setSelected(rows[0].symbol);setUpdatedAt(rows[0]?.signal_timestamp??rows[0]?.created_at??null)
   }catch(err){setError(err instanceof Error?err.message:'No se pudieron cargar las señales')}finally{setLoading(false)}
- }
  }, [selected])
  const loadHistory = useCallback(async (symbol:string) => {const{data,error:queryError}=await getSupabase().from('current_signals_public').select('symbol,signal_score,decision,regime,entry_price,created_at,signal_timestamp,timeframe,sample_size,model_version,rationale').eq('symbol',symbol).eq('model_version',MODEL_VERSION).eq('timeframe','15m').order('created_at',{ascending:false}).limit(24);if(!queryError&&data)setHistory(data.reverse())}, [])
  useEffect(()=>{loadSignals();const timer=window.setInterval(loadSignals,60000);return()=>window.clearInterval(timer)},[loadSignals]);useEffect(()=>{loadHistory(selected)},[loadHistory,selected])
