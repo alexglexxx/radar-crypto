@@ -1,0 +1,45 @@
+name: Radar score component attribution 15m
+
+on:
+  push:
+    branches:
+      - research/production-score-walkforward
+    paths:
+      - 'scripts/research/analyze-score-components.ts'
+      - 'scripts/research/production-features.ts'
+      - 'scripts/research/production-features.test.ts'
+      - '.github/workflows/score-component-attribution.yml'
+      - 'lib/features.ts'
+      - 'lib/scoring.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  score-component-attribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Verify research feature parity
+        run: npx vitest run scripts/research/production-features.test.ts
+      - name: Analyze score components
+        env:
+          MONTHS: '24'
+          SYMBOLS: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+        run: npx tsx scripts/research/analyze-score-components.ts
+      - name: Upload score component report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-score-component-attribution-15m
+          path: reports/score-component-attribution-15m.json
+          if-no-files-found: warn
