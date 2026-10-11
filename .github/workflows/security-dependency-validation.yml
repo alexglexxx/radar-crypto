@@ -1,0 +1,47 @@
+name: Radar dependency security remediation validation
+
+on:
+  push:
+    branches:
+      - security/dependency-remediation
+    paths:
+      - 'package.json'
+      - '.github/workflows/security-dependency-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install patched dependencies
+        run: npm install
+      - name: Capture dependency audit
+        run: |
+          mkdir -p reports
+          npm audit --json > reports/npm-audit.json || true
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm test
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: validation-only-placeholder
+        run: npm run build
+      - name: Upload dependency audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-security-remediation-audit
+          path: reports/npm-audit.json
+          if-no-files-found: warn
