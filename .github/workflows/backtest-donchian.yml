@@ -1,0 +1,40 @@
+name: Radar Donchian breakout 1h research
+on:
+  push:
+    paths:
+      - 'scripts/backtest-donchian.ts'
+      - '.github/workflows/backtest-donchian.yml'
+  workflow_dispatch:
+    inputs:
+      months:
+        description: Historical coverage in months (minimum 24)
+        default: '24'
+        required: false
+      symbols:
+        description: Comma-separated Binance spot symbols
+        default: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+        required: false
+jobs:
+  donchian-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run Donchian research
+        env:
+          MONTHS: ${{ inputs.months || '24' }}
+          SYMBOLS: ${{ inputs.symbols || 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT' }}
+        run: npx tsx scripts/backtest-donchian.ts
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-donchian-1h
+          path: reports/backtest-donchian-1h.json
+          if-no-files-found: error
