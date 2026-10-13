@@ -1,0 +1,57 @@
+name: Radar strategy ideas v2 (research)
+
+on:
+  push:
+    branches:
+      - research/strategy-ideas-v2
+    paths:
+      - 'scripts/research/ideas/**'
+      - '.github/workflows/research-ideas-v2.yml'
+  workflow_dispatch:
+    inputs:
+      months:
+        description: 'Months of history to evaluate (>= 15)'
+        required: false
+        default: '36'
+      timeframes:
+        description: 'Comma-separated: 15m,1h,4h'
+        required: false
+        default: '15m,1h,4h'
+
+permissions:
+  contents: read
+
+jobs:
+  ideas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Harness tests (no lookahead, fills, walk-forward hygiene)
+        run: npx vitest run scripts/research/ideas
+      - name: Run strategy ideas on real Binance data
+        env:
+          MONTHS: ${{ inputs.months || '36' }}
+          TIMEFRAMES: ${{ inputs.timeframes || '15m,1h,4h' }}
+          SYMBOLS: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
+        run: npx tsx scripts/research/ideas/run-ideas.ts
+      - name: Publish summary
+        if: always()
+        run: |
+          if [ -f reports/ideas-v2/summary.md ]; then
+            cat reports/ideas-v2/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-strategy-ideas-v2
+          path: reports/ideas-v2/
+          if-no-files-found: warn
