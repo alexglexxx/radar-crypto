@@ -5,7 +5,7 @@ import { promisify } from 'node:util'
 
 const exec = promisify(execFile)
 type Candle = { time: number; open: number; high: number; low: number; close: number; volume: number }
-type Trade = { symbol: string; entryTime: number; exitTime: number; entry: number; exit: number; grossReturn: number; netReturn: number; barsHeld: number }
+type Trade = { symbol: string; entryTime: number; exitTime: number; entry: number; exit: number; grossReturn: number; netReturn: number; barsHeld: number; exitReason: 'channel_exit' | 'period_end_mark' }
 const SYMBOLS = (process.env.SYMBOLS ?? 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT').split(',').map(x => x.trim()).filter(Boolean)
 const MONTHS = Math.max(24, Number(process.env.MONTHS ?? 24))
 const INTERVAL = '1h'
@@ -70,7 +70,7 @@ function channelLow(c: Candle[], i: number, n: number) {
   for (let j = i - n; j < i; j++) value = Math.min(value, c[j].low)
   return value
 }
-function simulate(symbol: string, candles: Candle[], start: number, end: number, entryN: number, exitN: number, costBps: number): Trade[] {
+function simulate(symbol: string, candles: Candle[], start: number, end: number, entryN: number, exitN: number, costBps: number): { trades: Trade[]; openAtPeriodEnd: number } {
   const trades: Trade[] = []
   let entryIndex = -1
   let entryPrice = 0
@@ -91,27 +91,35 @@ function simulate(symbol: string, candles: Candle[], start: number, end: number,
       // Exit signal on close i; fill at next open. Do not carry positions across OOS fold boundary.
       if (next.time < end && next.time > entryTime) {
         const grossReturn = next.open / entryPrice - 1
-        trades.push({ symbol, entryTime, exitTime: next.time, entry: entryPrice, exit: next.open, grossReturn, netReturn: grossReturn - costBps / 10000, barsHeld: i + 1 - entryIndex })
+        trades.push({ symbol, entryTime, exitTime: next.time, entry: entryPrice, exit: next.open, grossReturn, netReturn: grossReturn - costBps / 10000, barsHeld: i + 1 - entryIndex, exitReason: 'channel_exit' })
       }
       entryIndex = -1
       entryPrice = 0
       entryTime = 0
     }
   }
-  return trades
+  // Mark any remaining position to market at the final candle close within the test window.
+  // This is not a channel-triggered exit; it prevents silently dropping end-of-window exposure.
+  let openAtPeriodEnd = 0
+  if (entryIndex >= 0) {
+    const last = [...candles].reverse().find(x => x.time >= entryTime && x.time < end)
+    if (last) {
+      const grossReturn = last.close / entryPrice - 1
+      trades.push({ symbol, entryTime, exitTime: last.time, entry: entryPrice, exit: last.close, grossReturn, netReturn: grossReturn - costBps / 10000, barsHeld: Math.max(1, Math.round((last.time - entryTime) / 3600000)), exitReason: 'period_end_mark' })
+      openAtPeriodEnd = 1
+    }
+  }
+  return { trades, openAtPeriodEnd }
 }
 function stats(trades: Trade[]) {
-  let sum = 0, equity = 1, peak = 1, maxDrawdown = 0, wins = 0, profit = 0, loss = 0
-  for (const t of [...trades].sort((a, b) => a.entryTime - b.entryTime)) {
+  let sum = 0, wins = 0, profit = 0, loss = 0
+  for (const t of trades) {
     const r = t.netReturn
     sum += r
-    equity *= 1 + r
-    peak = Math.max(peak, equity)
-    maxDrawdown = Math.max(maxDrawdown, (peak - equity) / peak)
     if (r > 0) { wins++; profit += r } else loss += -r
   }
   const n = trades.length
-  return { trades: n, winRate: n ? wins / n : null, expectancy: n ? sum / n : null, profitFactor: loss ? profit / loss : null, compoundedReturn: equity - 1, maxDrawdown, averageBarsHeld: n ? trades.reduce((a, t) => a + t.barsHeld, 0) / n : null }
+  return { trades: n, winRate: n ? wins / n : null, expectancy: n ? sum / n : null, profitFactor: loss ? profit / loss : null, sumOfTradeReturns_notPortfolioReturn: sum, periodEndMarkedTrades: trades.filter(t => t.exitReason === 'period_end_mark').length, averageBarsHeld: n ? trades.reduce((a, t) => a + t.barsHeld, 0) / n : null }
 }
 function fmt(x: number | null) { return x === null ? 'N/A' : (x * 100).toFixed(3) + '%' }
 
@@ -148,24 +156,25 @@ async function main() {
       const testStart = Date.parse(te0 + 'T00:00:00Z'), testEnd = Date.parse(te1 + 'T00:00:00Z')
       const perSymbol: any[] = []
       const trades: Trade[] = []
+      let openAtPeriodEnd = 0
       for (const [symbol, candles] of datasets) {
-        const ts = simulate(symbol, candles, testStart, testEnd, config.entry, config.exit, 15)
-        trades.push(...ts)
-        perSymbol.push({ symbol, ...stats(ts) })
+        const sim = simulate(symbol, candles, testStart, testEnd, config.entry, config.exit, 15)
+        trades.push(...sim.trades)
+        openAtPeriodEnd += sim.openAtPeriodEnd
+        perSymbol.push({ symbol, ...stats(sim.trades), openPositionsMarkedAtPeriodEnd: sim.openAtPeriodEnd })
       }
       const sensitivity = COSTS_BPS.map(bps => {
         const rows: Trade[] = []
-        for (const [symbol, candles] of datasets) rows.push(...simulate(symbol, candles, testStart, testEnd, config.entry, config.exit, bps))
+        for (const [symbol, candles] of datasets) rows.push(...simulate(symbol, candles, testStart, testEnd, config.entry, config.exit, bps).trades)
         return { roundTripCostBps: bps, ...stats(rows) }
       })
-      foldResults.push({ fold: k + 1, train: tr0 + '..' + tr1, test: te0 + '..' + te1, testStats: stats(trades), perSymbol, costSensitivity: sensitivity })
-      console.log('[donchian] ' + config.name + ' fold ' + (k + 1) + ' trades=' + trades.length + ' expectancy=' + fmt(stats(trades).expectancy) + ' compounded=' + fmt(stats(trades).compoundedReturn))
+      foldResults.push({ fold: k + 1, train: tr0 + '..' + tr1, test: te0 + '..' + te1, testStats: stats(trades), openPositionsMarkedAtPeriodEnd: openAtPeriodEnd, perSymbol, costSensitivity: sensitivity })
+      console.log('[donchian] ' + config.name + ' fold ' + (k + 1) + ' trades=' + trades.length + ' expectancy=' + fmt(stats(trades).expectancy) + ' end-marked=' + openAtPeriodEnd)
     }
-    const allOos = foldResults.flatMap((f: any) => f.perSymbol)
     const expectancy = foldResults.map((f: any) => f.testStats.expectancy)
     results.push({ ...config, folds: foldResults, summary: { positiveOosFolds: foldResults.filter((f: any) => (f.testStats.expectancy ?? -1) > 0).length, folds: foldResults.length, oosExpectancies: expectancy, totalTrades: foldResults.reduce((n: number, f: any) => n + f.testStats.trades, 0), note: 'Fixed, predeclared parameters; no threshold optimization. Per-symbol stats are reported to expose concentration risk.' } })
   }
-  const report = { reportName: 'radar-crypto-donchian-breakout-1h', generatedAt: new Date().toISOString(), productionUntouched: true, notDeployable: true, methodology: { interval: '1h', signals: 'Long-only close breakout above prior N-bar high; enter at next candle open. Exit when close falls below prior M-bar low; exit next candle open.', configurations: configs, costsBpsRoundTrip: COSTS_BPS, costsInclude: 'Combined fee and slippage assumption; sensitivity at 15, 20, and 25 bps per round trip.', folds: 'Four fixed chronological OOS quarters; report trades whose entries and exits complete within the test quarter. Channel values exclude current candle. No parameter selection on OOS.', risk: 'Spot long-only proxy; ignores partial fills, spread variation, latency, exchange outages, taxes, and market impact. No leverage. Research only.' }, coverage, strategies: results }
+  const report = { reportName: 'radar-crypto-donchian-breakout-1h', generatedAt: new Date().toISOString(), productionUntouched: true, notDeployable: true, methodology: { interval: '1h', signals: 'Long-only close breakout above prior N-bar high; enter at next candle open. Exit when close falls below prior M-bar low; exit next candle open.', configurations: configs, costsBpsRoundTrip: COSTS_BPS, costsInclude: 'Combined fee and slippage assumption; sensitivity at 15, 20, and 25 bps per round trip.', folds: 'Four fixed chronological OOS quarters; positions still open at period end are marked to the final in-window close and explicitly counted. Channel values exclude current candle. No parameter selection on OOS. Pooled sum of trade returns is not portfolio return; capital-weighted portfolio equity/drawdown are intentionally not claimed in this report.', risk: 'Spot long-only proxy; ignores partial fills, spread variation, latency, exchange outages, taxes, and market impact. No leverage. Research only.' }, coverage, strategies: results }
   await fs.mkdir(REPORT_DIR, { recursive: true })
   await fs.writeFile(path.join(REPORT_DIR, 'backtest-donchian-1h.json'), JSON.stringify(report, null, 2) + '\n')
   console.log('[donchian] report saved: reports/backtest-donchian-1h.json')
