@@ -88,14 +88,15 @@ function simulate(symbol: string, candles: Candle[], start: number, end: number,
         entryTime = next.time
       }
     } else if (c.close < channelLow(candles, i, exitN)) {
-      // Exit signal on close i; fill at next open. Do not carry positions across OOS fold boundary.
+      // Exit signal on close i; only reset the position if the next-open fill is inside this OOS window.
+      // If the next open is at/after the boundary, leave it open so the end-of-period mark handles it.
       if (next.time < end && next.time > entryTime) {
         const grossReturn = next.open / entryPrice - 1
         trades.push({ symbol, entryTime, exitTime: next.time, entry: entryPrice, exit: next.open, grossReturn, netReturn: grossReturn - costBps / 10000, barsHeld: i + 1 - entryIndex, exitReason: 'channel_exit' })
+        entryIndex = -1
+        entryPrice = 0
+        entryTime = 0
       }
-      entryIndex = -1
-      entryPrice = 0
-      entryTime = 0
     }
   }
   // Mark any remaining position to market at the final candle close within the test window.
