@@ -1,0 +1,27 @@
+name: BTC ETH daily strategy hypothesis test
+on:
+  push:
+    branches: [research/btc-eth-regime-vs-reversion]
+    paths:
+      - scripts/backtest-btc-eth-daily.ts
+      - .github/workflows/backtest-btc-eth-daily.yml
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm run typecheck
+      - run: npx tsx scripts/backtest-btc-eth-daily.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: btc-eth-daily-research
+          path: reports/btc-eth-daily-research.json
+          if-no-files-found: error
+          retention-days: 90
