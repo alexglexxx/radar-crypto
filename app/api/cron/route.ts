@@ -33,20 +33,43 @@ function isAuthorized(request: NextRequest) {
   return scheme.toLowerCase() === 'bearer' && token === secret
 }
 
+const SIGNAL_PAGE_SIZE = 200
+const MAX_SIGNALS_PER_RUN = 50
+
+// Oldest-first LONG signals that still miss at least one outcome horizon. Signals that already have
+// every horizon are skipped, so the backlog can never starve newer signals (the previous
+// `.limit(200)` kept re-reading the same 200 completed rows forever).
+async function selectSignalsPendingOutcomes(supabase: ReturnType<typeof getSupabaseAdmin>, cutoff: string) {
+  const pending: any[] = []
+  for (let from = 0; pending.length < MAX_SIGNALS_PER_RUN; from += SIGNAL_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('radar_signals')
+      .select('id,symbol,signal_timestamp,entry_price,decision,model_version,signal_outcomes(horizon)')
+      .eq('decision', 'LONG')
+      .eq('model_version', MODEL_VERSION)
+      .lte('signal_timestamp', cutoff)
+      .order('signal_timestamp', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + SIGNAL_PAGE_SIZE - 1)
+
+    if (error) throw new Error(`Supabase outcome signals: ${error.message}`)
+    if (!data?.length) break
+
+    for (const row of data) {
+      const done = new Set((row.signal_outcomes ?? []).map((outcome: { horizon: string }) => outcome.horizon))
+      if (OUTCOME_HORIZONS.some(horizon => !done.has(horizon.name))) pending.push(row)
+      if (pending.length >= MAX_SIGNALS_PER_RUN) break
+    }
+    if (data.length < SIGNAL_PAGE_SIZE) break
+  }
+  return pending
+}
+
 async function evaluateMaturedLongSignals(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const cutoff = new Date(Date.now() - OUTCOME_HORIZONS[0].ms).toISOString()
 
-  const { data: signals, error: signalError } = await supabase
-    .from('radar_signals')
-    .select('id,symbol,signal_timestamp,entry_price,decision,model_version')
-    .eq('decision', 'LONG')
-    .eq('model_version', MODEL_VERSION)
-    .lte('signal_timestamp', cutoff)
-    .order('signal_timestamp', { ascending: true })
-    .limit(200)
-
-  if (signalError) throw new Error(`Supabase outcome signals: ${signalError.message}`)
-  if (!signals?.length) return { evaluated: 0, skipped: 0 }
+  const signals = await selectSignalsPendingOutcomes(supabase, cutoff)
+  if (!signals.length) return { evaluated: 0, skipped: 0 }
 
   let evaluated = 0
   let skipped = 0
@@ -149,133 +172,141 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin()
     const results = []
+    const failures: { symbol: string; error: string }[] = []
 
+    // Each symbol is isolated: one failing market must not stop the other three from updating.
     for (const symbol of SYMBOLS) {
-      const candles = await fetchWithRetry(symbol)
-      if (!candles.length) throw new Error(`No closed candles returned for ${symbol}`)
+      try {
+        const candles = await fetchWithRetry(symbol)
+        if (!candles.length) throw new Error(`No closed candles returned for ${symbol}`)
 
-      const rows = candles.map(c => ({
-        captured_at: new Date(c.openTime).toISOString(),
-        source_timestamp: new Date(c.closeTime).toISOString(),
-        symbol,
-        exchange: 'binance',
-        timeframe: TIMEFRAME,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-        volume: c.volume,
-      }))
-
-      const { data: snapshots, error: snapshotError } = await supabase
-        .from('market_snapshots')
-        .upsert(rows, { onConflict: 'captured_at,symbol,exchange,timeframe' })
-        .select('id,captured_at,source_timestamp,open,high,low,close,volume')
-
-      if (snapshotError) throw new Error(`Supabase snapshots ${symbol}: ${snapshotError.message}`)
-      if (!snapshots?.length) throw new Error(`No snapshots persisted for ${symbol}`)
-
-      const featureRows = snapshots.map((s: any) => {
-        const candleSet = candles.filter(c => c.openTime <= new Date(s.captured_at).getTime())
-        const f = calculateFeatures(candleSet)
-        return {
-          snapshot_id: s.id,
+        const rows = candles.map(c => ({
+          captured_at: new Date(c.openTime).toISOString(),
+          source_timestamp: new Date(c.closeTime).toISOString(),
           symbol,
+          exchange: 'binance',
           timeframe: TIMEFRAME,
-          captured_at: s.captured_at,
-          ...f,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+          volume: c.volume,
+        }))
+
+        const { data: snapshots, error: snapshotError } = await supabase
+          .from('market_snapshots')
+          .upsert(rows, { onConflict: 'captured_at,symbol,exchange,timeframe' })
+          .select('id,captured_at,source_timestamp,open,high,low,close,volume')
+
+        if (snapshotError) throw new Error(`Supabase snapshots ${symbol}: ${snapshotError.message}`)
+        if (!snapshots?.length) throw new Error(`No snapshots persisted for ${symbol}`)
+
+        const featureRows = snapshots.map((s: any) => {
+          const candleSet = candles.filter(c => c.openTime <= new Date(s.captured_at).getTime())
+          const f = calculateFeatures(candleSet)
+          return {
+            snapshot_id: s.id,
+            symbol,
+            timeframe: TIMEFRAME,
+            captured_at: s.captured_at,
+            ...f,
+          }
+        }).filter((r: any) => r.ema_200 !== null)
+
+        if (featureRows.length) {
+          const { error: featureError } = await supabase
+            .from('features')
+            .upsert(featureRows, { onConflict: 'snapshot_id' })
+          if (featureError) throw new Error(`Supabase features ${symbol}: ${featureError.message}`)
         }
-      }).filter((r: any) => r.ema_200 !== null)
 
-      if (featureRows.length) {
-        const { error: featureError } = await supabase
+        const latest = featureRows.sort((a: any, b: any) =>
+          new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime(),
+        )[0]
+
+        if (!latest) throw new Error(`No usable features for ${symbol}`)
+
+        const latestSnapshot = snapshots.find((s: any) => s.id === latest.snapshot_id)
+        if (!latestSnapshot) throw new Error(`Missing latest snapshot for ${symbol}`)
+
+        const { data: persistedFeature, error: featureLookupError } = await supabase
           .from('features')
-          .upsert(featureRows, { onConflict: 'snapshot_id' })
-        if (featureError) throw new Error(`Supabase features ${symbol}: ${featureError.message}`)
-      }
+          .select('id')
+          .eq('snapshot_id', latest.snapshot_id)
+          .single()
 
-      const latest = featureRows.sort((a: any, b: any) =>
-        new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime(),
-      )[0]
+        if (featureLookupError || !persistedFeature) throw new Error(`Missing persisted feature for ${symbol}`)
 
-      if (!latest) throw new Error(`No usable features for ${symbol}`)
+        const { score, status } = calculateRadarScore(latest)
+        const decision = status === 'SETUP LONG' ? 'LONG' : 'WAIT'
 
-      const latestSnapshot = snapshots.find((s: any) => s.id === latest.snapshot_id)
-      if (!latestSnapshot) throw new Error(`Missing latest snapshot for ${symbol}`)
+        const { error: signalError } = await supabase
+          .from('radar_signals')
+          .upsert({
+            snapshot_id: latestSnapshot.id,
+            feature_id: persistedFeature.id,
+            symbol,
+            timeframe: TIMEFRAME,
+            regime: status,
+            signal_score: score,
+            decision,
+            entry_price: latestSnapshot.close,
+            signal_timestamp: latestSnapshot.source_timestamp,
+            stop_price: null,
+            target_price: null,
+            risk_reward: null,
+            estimated_probability: null,
+            expected_r: null,
+            sample_size: featureRows.length,
+            rationale: {
+              exchange: 'binance',
+              price: latestSnapshot.close,
+              return_15m: latest.return_15m,
+              return_1h: latest.return_1h,
+              return_4h: latest.return_4h,
+              return_24h: latest.return_24h,
+              ema_20: latest.ema_20,
+              ema_50: latest.ema_50,
+              ema_200: latest.ema_200,
+              trend_strength: latest.trend_strength,
+              rsi_14: latest.rsi_14,
+              macd_histogram: latest.macd_histogram,
+              volume_ratio: latest.volume_ratio,
+              atr: latest.atr,
+            },
+            model_version: MODEL_VERSION,
+          }, { onConflict: 'snapshot_id,model_version' })
 
-      const { data: persistedFeature, error: featureLookupError } = await supabase
-        .from('features')
-        .select('id')
-        .eq('snapshot_id', latest.snapshot_id)
-        .single()
+        if (signalError) throw new Error(`Supabase radar signal ${symbol}: ${signalError.message}`)
 
-      if (featureLookupError || !persistedFeature) throw new Error(`Missing persisted feature for ${symbol}`)
-
-      const { score, status } = calculateRadarScore(latest)
-      const decision = status === 'SETUP LONG' ? 'LONG' : 'WAIT'
-
-      const { error: signalError } = await supabase
-        .from('radar_signals')
-        .upsert({
-          snapshot_id: latestSnapshot.id,
-          feature_id: persistedFeature.id,
+        results.push({
           symbol,
-          timeframe: TIMEFRAME,
-          regime: status,
-          signal_score: score,
+          candles: candles.length,
+          snapshots: snapshots.length,
+          features: featureRows.length,
+          latest: latest.captured_at,
+          score,
+          status,
           decision,
-          entry_price: latestSnapshot.close,
-          signal_timestamp: latestSnapshot.source_timestamp,
-          stop_price: null,
-          target_price: null,
-          risk_reward: null,
-          estimated_probability: null,
-          expected_r: null,
-          sample_size: featureRows.length,
-          rationale: {
-            exchange: 'binance',
-            price: latestSnapshot.close,
-            return_15m: latest.return_15m,
-            return_1h: latest.return_1h,
-            return_4h: latest.return_4h,
-            return_24h: latest.return_24h,
-            ema_20: latest.ema_20,
-            ema_50: latest.ema_50,
-            ema_200: latest.ema_200,
-            trend_strength: latest.trend_strength,
-            rsi_14: latest.rsi_14,
-            macd_histogram: latest.macd_histogram,
-            volume_ratio: latest.volume_ratio,
-            atr: latest.atr,
-          },
-          model_version: MODEL_VERSION,
-        }, { onConflict: 'snapshot_id,model_version' })
-
-      if (signalError) throw new Error(`Supabase radar signal ${symbol}: ${signalError.message}`)
-
-      results.push({
-        symbol,
-        candles: candles.length,
-        snapshots: snapshots.length,
-        features: featureRows.length,
-        latest: latest.captured_at,
-        score,
-        status,
-        decision,
-      })
+        })
+      } catch (error) {
+        console.error(`[radar-crypto cron] ${symbol}`, error)
+        failures.push({ symbol, error: error instanceof Error ? error.message : 'Unknown ingestion error' })
+      }
     }
 
     const outcomes = await evaluateMaturedLongSignals(supabase)
 
     return NextResponse.json({
-      ok: true,
+      ok: failures.length === 0,
       exchange: 'binance',
       timeframe: TIMEFRAME,
       model_version: MODEL_VERSION,
       generated_at: new Date().toISOString(),
       outcomes,
       results,
-    })
+      failures,
+    }, { status: failures.length === 0 ? 200 : 500 })
   } catch (error) {
     console.error('[radar-crypto cron]', error)
     return NextResponse.json({

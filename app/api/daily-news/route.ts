@@ -21,9 +21,20 @@ function admin() {
 
 function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim()
-  if (!secret) return false
-  const auth = request.headers.get('authorization')?.trim() || ''
-  return auth.toLowerCase() === `bearer ${secret}`
+  const auth = request.headers.get('authorization')?.trim()
+  if (!secret || !auth) return false
+  // Only the scheme is case-insensitive; the secret itself must match exactly.
+  const [scheme, ...tokenParts] = auth.split(/\s+/)
+  return scheme.toLowerCase() === 'bearer' && tokenParts.join(' ') === secret
+}
+
+function isHttpUrl(value: string) {
+  try {
+    const { protocol } = new URL(value)
+    return protocol === 'https:' || protocol === 'http:'
+  } catch {
+    return false
+  }
 }
 
 type Candidate = {
@@ -59,7 +70,7 @@ function parseRss(xml: string, source: string): Candidate[] {
     title: tag(item, 'title'),
     description: tag(item, 'description').slice(0, 1200),
     publishedAt: tag(item, 'pubDate') || null,
-  })).filter(x => x.title && x.url)
+  })).filter(x => x.title && x.url && isHttpUrl(x.url))
 }
 
 const macroTerms = ['fed', 'federal reserve', 'fomc', 'cpi', 'inflation', 'interest rate', 'rates', 'treasury', 'dollar', 'dxy', 'jobs report', 'employment', 'recession', 'liquidity', 'etf', 'sec', 'regulation', 'regulator', 'stablecoin', 'tariff', 'china', 'europe', 'hack', 'exploit', 'liquidation', 'bankruptcy']
@@ -155,6 +166,7 @@ export async function GET(request: NextRequest) {
     if (!candidates.length) throw new Error('No relevant crypto news found for BTC/ETH/SOL/XRP')
     const { analysis, model } = await analyze(candidates)
     const selected = analysis.items.filter((x: any) => candidates[x.source_index]).sort((a: any, b: any) => b.relevance_score - a.relevance_score).slice(0, 7)
+    if (!selected.length) throw new Error('AI analysis returned no usable news items')
     const { data: briefing, error: briefingError } = await supabase.from('news_briefings').insert({ briefing_date: today, title: `Crypto Daily — ${today}`, intro: analysis.intro, market_read: analysis.market_read, risk_read: analysis.risk_read, model_version: model, item_count: selected.length }).select().single()
     if (briefingError || !briefing) throw new Error(briefingError?.message || 'Could not create briefing')
 
@@ -163,7 +175,11 @@ export async function GET(request: NextRequest) {
       return { briefing_id: briefing.id, source: source.source, url: source.url, title: source.title, published_at: source.publishedAt, summary: x.summary, why_it_matters: x.why_it_matters, impact_direction: x.impact_direction, impact_intensity: x.impact_intensity, impact_start: x.impact_start, primary_window: x.primary_window, persistence_window: x.persistence_window, affected_assets: x.affected_assets, relevance_score: x.relevance_score, confidence: x.confidence, market_confirmation: 'pending', rank: rank + 1 }
     })
     const { error: itemError } = await supabase.from('news_items').insert(rows)
-    if (itemError) throw new Error(itemError.message)
+    if (itemError) {
+      // Roll the briefing back (its items cascade) so the next run retries instead of answering `reused: true`.
+      await supabase.from('news_briefings').delete().eq('id', briefing.id)
+      throw new Error(itemError.message)
+    }
     return NextResponse.json({ ok: true, briefing: { ...briefing, item_count: rows.length }, candidates: candidates.length, model })
   } catch (error) {
     console.error('[daily-news]', error)
