@@ -57,8 +57,8 @@ function low(c:Candle[],i:number,n:number){let v=Infinity;for(let j=i-n;j<i;j++)
 
 type SimResult={equity:number[]; trades:number; wins:number; endLiquidations:number}
 function simulateSleeve(c:Candle[],start:number,end:number,config:Config,costBps:number):SimResult {
-  const fee=costBps/10000
-  let cash=0.25, qty=0, entryPrice=0, entryTime=0, trades=0,wins=0,endLiquidations=0
+  const fee=costBps/20000 // costBps is the combined round-trip cost; charge half per side
+  let cash=0.25, qty=0, entryPrice=0, entryTime=0, entryStake=0, trades=0,wins=0,endLiquidations=0
   const equity:number[]=[]
   const first=Math.max(config.entry,config.exit)
   const inWindow=c.filter(x=>x.time>=start&&x.time<end)
@@ -67,21 +67,22 @@ function simulateSleeve(c:Candle[],start:number,end:number,config:Config,costBps
   for(const bar of inWindow){
     const i=byTime.get(bar.time)!
     const next=c[i+1]
+    // Mark equity at this candle close before acting on its signal; fills happen at the next open.
+    equity.push(cash+qty*bar.close)
     const holding=qty>0
     if(!holding && i>=first && bar.close>high(c,i,config.entry) && next && next.time<end){
-      entryPrice=next.open; entryTime=next.time
+      entryPrice=next.open; entryTime=next.time; entryStake=cash
       qty=(cash*(1-fee))/entryPrice
       cash=0
     } else if(holding && i>=first && bar.close<low(c,i,config.exit) && next && next.time<end && next.time>entryTime){
       const proceeds=qty*next.open*(1-fee)
-      if(proceeds>0) wins += proceeds > 0.25 ? 1 : 0
-      cash=proceeds; qty=0; entryPrice=0; entryTime=0; trades++
+      if(proceeds>entryStake) wins++
+      cash=proceeds; qty=0; entryPrice=0; entryTime=0; entryStake=0; trades++
     }
-    equity.push(cash+qty*bar.close)
   }
   if(qty>0){
     const last=inWindow[inWindow.length-1]
-    cash=qty*last.close*(1-fee); qty=0; trades++; endLiquidations++
+    cash=qty*last.close*(1-fee); qty=0; trades++; endLiquidations++; if(cash>entryStake) wins++
     equity[equity.length-1]=cash
   }
   return {equity,trades,wins,endLiquidations}
