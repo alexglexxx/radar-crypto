@@ -42,6 +42,9 @@ jobs:
           TIMEFRAMES: ${{ inputs.timeframes || '15m,1h,4h' }}
           SYMBOLS: 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT'
         run: npx tsx scripts/research/ideas/run-ideas.ts
+      - name: Expose results as annotations (readable through the API)
+        if: always()
+        run: node scripts/research/ideas/annotate-results.cjs
       - name: Publish summary
         if: always()
         run: |
