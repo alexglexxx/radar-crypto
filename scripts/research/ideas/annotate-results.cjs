@@ -9,13 +9,17 @@ if (!fs.existsSync(file)) {
   process.exit(0)
 }
 
+// GitHub shows at most 10 notice annotations per step: usage `node annotate-results.cjs <start> <end>`.
+const start = Number(process.argv[2] ?? 0)
+const end = Number(process.argv[3] ?? Infinity)
 const { meta, results } = JSON.parse(fs.readFileSync(file, 'utf8'))
 const pct = (v, d = 3) => (v === null || v === undefined ? 'n/d' : (v * 100).toFixed(d) + '%')
 const clean = text => String(text).replace(/[\r\n%]/g, ' ')
 
-console.log(`::notice title=ideas-v2 meta::${clean(JSON.stringify({ source: meta.dataSource, months: meta.months, strategies: meta.strategiesEvaluated, generatedAt: meta.generatedAt }))}`)
+if (start === 0) console.log(`::notice title=ideas-v2 meta::${clean(JSON.stringify({ source: meta.dataSource, months: meta.months, strategies: meta.strategiesEvaluated, generatedAt: meta.generatedAt }))}`)
 
-for (const r of [...results].sort((a, b) => a.idea - b.idea || a.id.localeCompare(b.id))) {
+const ordered = [...results].sort((a, b) => a.idea - b.idea || a.id.localeCompare(b.id)).slice(start, end)
+for (const r of ordered) {
   const p = (r.pooled && r.pooled['20']) || {}
   const s = (r.pooled && r.pooled['30']) || {}
   const line = {
