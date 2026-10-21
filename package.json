@@ -2,6 +2,9 @@
   "name": "radar-crypto",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +12,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "backtest": "tsx scripts/backtest.ts"
+    "backtest": "tsx scripts/backtest.ts",
+    "verify:engine": "tsx scripts/backtest-baseline.ts --verify-engine"
   },
   "dependencies": {
     "next": "14.2.5",
