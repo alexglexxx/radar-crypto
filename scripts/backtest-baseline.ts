@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { calculateFeatures, type Candle, type FeatureSet } from '../lib/features'
 import { calculateRadarScore } from '../lib/scoring'
+import { assertHistoricalCoverage } from './research/historical-coverage'
 
 const exec = promisify(execFile)
 
@@ -333,7 +334,7 @@ function computeMetricsFromReturns(values: number[]): SummaryMetrics {
 // DATA DOWNLOAD & PARSING
 // ============================================================================
 
-async function downloadMonth(symbol: string, monthKey: string): Promise<string | null> {
+async function downloadMonth(symbol: string, monthKey: string): Promise<string> {
   const file = path.join(DATA_DIR, `${symbol}-${INTERVAL}-${monthKey}.zip`)
   try {
     await fs.access(file)
@@ -343,8 +344,7 @@ async function downloadMonth(symbol: string, monthKey: string): Promise<string |
   const url = `https://data.binance.vision/data/spot/monthly/klines/${symbol}/${INTERVAL}/${symbol}-${INTERVAL}-${monthKey}.zip`
   const res = await fetch(url)
   if (res.status === 404) {
-    console.warn(`[backtest] Binance archive unavailable (404), skipping ${symbol} ${monthKey}`)
-    return null
+    throw new Error(`Binance archive unavailable for ${symbol} ${monthKey}; refusing incomplete backtest`)
   }
   if (!res.ok) throw new Error(`Binance archive ${res.status}: ${url}`)
   const bytes = Buffer.from(await res.arrayBuffer())
@@ -394,14 +394,15 @@ async function loadSymbol(symbol: string, startMs: number, endMs: number): Promi
 
   for (const monthKey of months) {
     const zipFile = await downloadMonth(symbol, monthKey)
-    if (!zipFile) continue
     const monthCandles = await unzipCsv(zipFile)
     candles.push(...monthCandles)
   }
 
-  return candles
+  const selected = candles
     .filter(c => c.openTime >= startMs && c.openTime <= endMs)
     .sort((a, b) => a.openTime - b.openTime)
+  assertHistoricalCoverage(selected, symbol, startMs, endMs)
+  return selected
 }
 
 // ============================================================================

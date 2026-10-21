@@ -4,6 +4,7 @@ import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { type Candle } from '../lib/features'
+import { assertHistoricalCoverage } from './research/historical-coverage'
 
 const exec = promisify(execFile)
 
@@ -166,9 +167,11 @@ async function loadSymbol(symbol: string, startMs: number, endMs: number): Promi
     candles.push(...monthCandles)
   }
 
-  return candles
+  const selected = candles
     .filter(c => c.openTime >= startMs && c.openTime <= endMs)
     .sort((a, b) => a.openTime - b.openTime)
+  assertHistoricalCoverage(selected, symbol, startMs, endMs)
+  return selected
 }
 
 function applyFee(ret: number, feeBps = FEE_BPS, slippageBps = SLIPPAGE_BPS) {

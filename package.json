@@ -6,6 +6,8 @@
     "node": "24.x"
   },
   "scripts": {
+    "predev": "node scripts/check-public-env.mjs",
+    "prebuild": "node scripts/check-public-env.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
