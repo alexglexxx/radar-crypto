@@ -1,3 +1,5 @@
+import { closedCandles, LIVE_HISTORY_LIMIT } from '../live-window'
+
 export type BinanceCandle = {
   openTime: number
   closeTime: number
@@ -27,7 +29,7 @@ function parseCandle(row: unknown): BinanceCandle {
   const values = [openTime, open, high, low, close, volume, closeTime]
 
   if (!values.every(Number.isFinite)) throw new Error('Binance returned non-finite candle values')
-  if (openTime < 0 || closeTime < 0 || open < 0 || high < 0 || low < 0 || close < 0 || volume < 0) {
+  if (openTime < 0 || closeTime < 0 || open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0) {
     throw new Error('Binance returned negative candle values')
   }
   if (closeTime <= openTime) throw new Error('Binance returned an invalid candle interval')
@@ -38,7 +40,7 @@ function parseCandle(row: unknown): BinanceCandle {
   return { openTime, open, high, low, close, volume, closeTime }
 }
 
-export async function fetchBinanceClosedCandles(symbol: string, interval = '15m', limit = 250): Promise<BinanceCandle[]> {
+export async function fetchBinanceClosedCandles(symbol: string, interval = '15m', limit = LIVE_HISTORY_LIMIT): Promise<BinanceCandle[]> {
   const url = new URL('/api/v3/klines', BASE_URL)
   url.searchParams.set('symbol', symbol)
   url.searchParams.set('interval', interval)
@@ -47,6 +49,7 @@ export async function fetchBinanceClosedCandles(symbol: string, interval = '15m'
   const response = await fetch(url, {
     cache: 'no-store',
     headers: { accept: 'application/json' },
+    signal: AbortSignal.timeout(10_000),
   })
 
   if (!response.ok) throw new Error(`Binance klines failed: HTTP ${response.status}`)
@@ -55,12 +58,19 @@ export async function fetchBinanceClosedCandles(symbol: string, interval = '15m'
   if (!Array.isArray(rows)) throw new Error('Binance klines returned an invalid payload')
 
   const now = Date.now()
-  const candles = rows.map(parseCandle).filter(c => c.closeTime < now - 1000)
+  const candles = closedCandles(rows.map(parseCandle), now)
 
   for (let i = 1; i < candles.length; i++) {
     if (candles[i].openTime <= candles[i - 1].openTime) {
       throw new Error('Binance returned candles out of order')
     }
+    if (interval === '15m' && candles[i].openTime - candles[i - 1].openTime !== 15 * 60 * 1000) {
+      throw new Error('Binance returned a gap in 15m candles')
+    }
+  }
+
+  if (interval === '15m' && candles.some(c => c.openTime % 900_000 !== 0 || c.closeTime !== c.openTime + 899_999)) {
+    throw new Error('Binance returned an invalid 15m candle boundary')
   }
 
   return candles

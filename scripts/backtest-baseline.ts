@@ -1,3 +1,4 @@
+import { replayLiveSignal, replayLiveOutcome, candleCloseTime, BAR_MS } from '../lib/live-window'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
@@ -370,7 +371,8 @@ async function unzipCsv(zipFile: string): Promise<Candle[]> {
     const row = lines[i].split(',')
     if (row.length < 6) continue
     const [openTimeRaw, openRaw, highRaw, lowRaw, closeRaw, volumeRaw] = row
-    const openTime = Number(openTimeRaw)
+    const rawOpenTime = Number(openTimeRaw)
+    const openTime = rawOpenTime > 1e14 ? Math.floor(rawOpenTime / 1000) : rawOpenTime
     const open = Number(openRaw)
     const high = Number(highRaw)
     const low = Number(lowRaw)
@@ -605,38 +607,14 @@ async function runBacktest(): Promise<BacktestReport> {
     }
 
     console.log('[backtest] Processing signals for ' + symbol + '...')
-    const featureEngine = new IncrementalFeatureEngine()
-
-    // Spot-check incremental features against production at three checkpoints.
-    const parityIndices = [200, Math.min(1000, candles.length - 17), Math.min(2000, candles.length - 17)]
-    for (const parityIndex of parityIndices) {
-      const expected = calculateFeatures(candles.slice(0, parityIndex + 1))
-      const parityEngine = new IncrementalFeatureEngine()
-      let actual: FeatureSet | null = null
-      for (let j = 0; j <= parityIndex; j++) actual = parityEngine.update(candles[j])
-      if (!actual) throw new Error('Feature parity engine produced no result')
-      const fields: (keyof FeatureSet)[] = ['return_15m','return_1h','return_4h','return_24h','ema_20','ema_50','ema_200','trend_strength','rsi_14','macd','macd_signal','macd_histogram','volume_sma','volume_ratio','volatility','atr']
-      for (const field of fields) {
-        const a = actual[field]
-        const e = expected[field]
-        const equal = a === null && e === null
-        const closeEnough = typeof a === 'number' && typeof e === 'number' &&
-          Math.abs(a - e) <= Math.max(1e-12, Math.abs(e) * 1e-10)
-        if (!equal && !closeEnough) {
-          throw new Error('Feature parity mismatch for ' + symbol + ' index ' + parityIndex + ' field ' + field + ': incremental=' + a + ' production=' + e)
-        }
-      }
-    }
-    console.log('[backtest] ' + symbol + ': feature parity checks passed')
-
     for (let i = 0; i < candles.length; i++) {
       const candle = candles[i]
-      const features = featureEngine.update(candle)
-
-      if (i < 200 || i >= candles.length - 16) continue
+      if (i < 199 || i >= candles.length - 16) continue
+      const replay = replayLiveSignal(candles, candle.openTime + BAR_MS + 1000)
+      if (!replay || replay.signalTimestamp !== candleCloseTime(candle)) continue
 
       // PHASE 1: Signal generation (no look-ahead)
-      const { score, status } = calculateRadarScore(features)
+      const { score, status } = replay
 
       if (i % 10000 === 0) {
         console.log('[backtest] ' + symbol + ': processed ' + i.toLocaleString() + '/' + candles.length.toLocaleString() + ' candles')
@@ -645,7 +623,7 @@ async function runBacktest(): Promise<BacktestReport> {
       // Only process SETUP LONG signals
       if (status !== 'SETUP LONG') continue
 
-      const signalTimestamp = new Date(candle.openTime + 15 * 60 * 1000).toISOString()
+      const signalTimestamp = new Date(candleCloseTime(candle)).toISOString()
       const asOfTime = new Date(signalTimestamp)
 
       // Determine split
@@ -676,36 +654,21 @@ async function runBacktest(): Promise<BacktestReport> {
           continue
         }
 
-        const targetCandle = candles[targetIdx]
-        if (!targetCandle || !Number.isFinite(targetCandle.close) || targetCandle.close <= 0) {
-          horizonReturns[horizon] = null
-          outcomes[horizon] = null
-          continue
-        }
+        const measured = replayLiveOutcome(candles, i, targetIdx - i)
+        if (!measured) continue
+        horizonReturns[horizon] = measured.realized_return
+        outcomes[horizon] = measured.outcome as 'WIN' | 'LOSS' | 'TIMEOUT'
+        // Reports historically display MAE magnitude; DB stores signed excursion.
+        mae[horizon] = Math.abs(measured.max_adverse_excursion)
+        mfe[horizon] = measured.max_favorable_excursion
 
-        // Calculate return from entry to target
-        const ret = (targetCandle.close - candle.close) / candle.close
-        horizonReturns[horizon] = ret
-
-        // Calculate MAE/MFE on the path
-        const pathCandles = candles.slice(i + 1, targetIdx + 1)
-        if (pathCandles.length > 0) {
-          const lows = pathCandles.map(c => c.low)
-          const highs = pathCandles.map(c => c.high)
-          const lowestPoint = Math.min(...lows)
-          const highestPoint = Math.max(...highs)
-          mae[horizon] = Math.abs((lowestPoint - candle.close) / candle.close)
-          mfe[horizon] = (highestPoint - candle.close) / candle.close
-        }
-
-        outcomes[horizon] = getOutcomeCategory(ret)
       }
 
       const signal: SignalRecord = {
         symbol,
         signalTimestamp,
         candleOpenTime: candle.openTime,
-        candleCloseTime: candle.openTime + 15 * 60 * 1000,
+        candleCloseTime: candleCloseTime(candle),
         entryPrice: candle.close,
         score,
         status,
@@ -988,20 +951,20 @@ async function runBacktest(): Promise<BacktestReport> {
       slippage_assumption: `Scenario C adds ${SLIPPAGE_BPS_CONSERVATIVE} bps as conservative mid-to-market slippage, representing partial fill at slightly worse prices.`,
       model_version_used: MODEL_VERSION,
       production_functions_imported: [
-        'lib/features.ts: calculateFeatures() (parity spot-checks)',
-        'scripts/backtest-baseline.ts: IncrementalFeatureEngine mirrors calculateFeatures() formulas',
+        'lib/features.ts: calculateFeatures() (every rolling window)',
+        'lib/live-window.ts: replayLiveSignal() reproduces the live response window',
         'lib/scoring.ts: calculateRadarScore()',
       ],
       timestamp_precision:
-        'Signal timestamp is derived from candle openTime plus 15m interval. Outcome targets are subsequent closed candles.',
+        'Signal timestamp equals Binance closeTime: candle openTime plus 15m minus 1ms. Outcome targets are subsequent closed candles.',
       model_issues_found: [
         'calculateFeatures() hardcodes return_5m to null; the 5m feature is not available despite the FeatureSet type definition.',
         'Production route defines regime via status value ("SETUP LONG", "VIGILAR", "NEUTRAL", "EVITAR") rather than a separate market-regime classifier.',
       ],
       methodology_warnings: [
         'Entry price uses close of the signal bar; this is realistic but could experience microfill slippage on market orders.',
-        'Outcome measurement assumes the first available candle close at the target horizon; gaps or data anomalies could affect results.',
-        'Incremental feature engine is benchmark-only and validated against production calculateFeatures() at three checkpoints per symbol.'
+        'Outcome measurement requires the exact target timestamp and a complete path, using the production measureOutcome function; incomplete results remain null.',
+        'Rolling response limit 250 includes the open candle; typically 249 closed bars, evaluated 1 second after the next open. Missing input windows are skipped. Archived reports from growing history are not comparable.'
       ],
     },
     costs: {
@@ -1166,6 +1129,33 @@ async function generateReports(report: BacktestReport): Promise<void> {
 
 async function main() {
   try {
+    if (process.argv.includes('--verify-engine')) {
+      let checks = 0
+      for (const regime of ['flat', 'trend', 'cycle']) {
+        const candles: Candle[] = Array.from({ length: 600 }, (_, i) => {
+          const close = regime === 'flat' ? 100 : regime === 'trend' ? 100 + i * 0.2 : 100 + Math.sin(i / 8) * 10
+          return { openTime: i * 900_000, open: close, high: close + 1, low: close - 1, close, volume: 1000 + i % 17 * 100 }
+        })
+        const engine = new IncrementalFeatureEngine()
+        for (let i = 0; i < candles.length; i++) {
+          const actual = engine.update(candles[i])
+          if (![199, 200, 248, 249, 499, 599].includes(i)) continue
+          const expected = calculateFeatures(candles.slice(0, i + 1))
+          for (const field of Object.keys(expected) as (keyof FeatureSet)[]) {
+            const a = actual[field], e = expected[field]
+            if (a === null && e === null) continue
+            if (typeof a !== 'number' || typeof e !== 'number' || Math.abs(a - e) > Math.max(1e-12, Math.abs(e) * 1e-10)) {
+              throw new Error(`Feature parity mismatch: ${regime}/${i}/${field}: ${a} vs ${e}`)
+            }
+          }
+          const actualScore = calculateRadarScore(actual), expectedScore = calculateRadarScore(expected)
+          if (JSON.stringify(actualScore) !== JSON.stringify(expectedScore)) throw new Error(`Score parity mismatch: ${regime}/${i}`)
+          checks++
+        }
+      }
+      console.log(`[verify-engine] PASS: ${checks} feature and score checkpoints; v1.1-live unchanged; no network or writes.`)
+      return
+    }
     console.log(`\n[backtest] Starting baseline benchmark run`)
     console.log(`[backtest] Model version: ${MODEL_VERSION}`)
     console.log(`[backtest] Symbols: ${SYMBOLS.join(', ')}`)

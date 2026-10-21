@@ -1,9 +1,9 @@
+import { replayLiveSignal, replayLiveOutcome, candleCloseTime, BAR_MS } from '../lib/live-window'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { calculateFeatures, type Candle } from '../lib/features'
-import { calculateRadarScore } from '../lib/scoring'
+import { type Candle } from '../lib/features'
 
 const exec = promisify(execFile)
 
@@ -141,7 +141,8 @@ async function unzipCsv(zipFile: string): Promise<Candle[]> {
     const row = lines[i].split(',')
     if (row.length < 6) continue
     const [openTimeRaw, openRaw, highRaw, lowRaw, closeRaw, volumeRaw] = row
-    const openTime = Number(openTimeRaw)
+    const rawOpenTime = Number(openTimeRaw)
+    const openTime = rawOpenTime > 1e14 ? Math.floor(rawOpenTime / 1000) : rawOpenTime
     const open = Number(openRaw)
     const high = Number(highRaw)
     const low = Number(lowRaw)
@@ -411,15 +412,14 @@ async function main() {
   for (const symbol of SYMBOLS) {
     const candles = symbolData.get(symbol) ?? []
     if (!candles.length) continue
-    for (let i = 200; i < candles.length - 16; i++) {
+    for (let i = 199; i < candles.length - 16; i++) {
       const candle = candles[i]
-      const historical = candles.slice(0, i + 1)
-      if (historical.length < 200) continue
-      const features = calculateFeatures(historical)
-      const { score, status } = calculateRadarScore(features)
+      const replay = replayLiveSignal(candles, candle.openTime + BAR_MS + 1000)
+      if (!replay || replay.signalTimestamp !== candleCloseTime(candle)) continue
+      const { score, status } = replay
       if (status !== 'SETUP LONG') continue
 
-      const signalTimestamp = new Date(candle.openTime + 15 * 60 * 1000).toISOString()
+      const signalTimestamp = new Date(candleCloseTime(candle)).toISOString()
       const entryPrice = candle.close
       const entryTime = new Date(candle.openTime).toISOString()
       const asOf = new Date(signalTimestamp)
@@ -442,23 +442,14 @@ async function main() {
           continue
         }
 
-        const targetCandle = candles[targetIndex]
-        if (!targetCandle || !Number.isFinite(targetCandle.close)) {
-          horizonReturns[horizon] = null
-          outcomeByHorizon[horizon] = null
-          continue
-        }
+        const measured = replayLiveOutcome(candles, i, targetIndex - i)
+        if (!measured) continue
+        horizonReturns[horizon] = measured.realized_return
+        outcomeByHorizon[horizon] = measured.outcome as 'WIN' | 'LOSS' | 'TIMEOUT'
+        // Reports historically display MAE magnitude; DB stores signed excursion.
+        mae[horizon] = Math.abs(measured.max_adverse_excursion)
+        mfe[horizon] = measured.max_favorable_excursion
 
-        const ret = trailingReturnFromPrices(entryPrice, targetCandle.close)
-        const path = candles.slice(i + 1, targetIndex + 1)
-        const lowReturns = path.map(c => (c.low - entryPrice) / entryPrice)
-        const highReturns = path.map(c => (c.high - entryPrice) / entryPrice)
-        const adverseExc = lowReturns.length ? Math.min(...lowReturns) : null
-        const favorableExc = highReturns.length ? Math.max(...highReturns) : null
-        horizonReturns[horizon] = ret
-        outcomeByHorizon[horizon] = getSignalCategory(ret)
-        mae[horizon] = adverseExc === null ? null : Math.abs(adverseExc)
-        mfe[horizon] = favorableExc === null ? null : favorableExc
       }
 
       const split: 'TRAIN' | 'VALIDATION' | 'TEST' = asOf < trainEnd ? 'TRAIN' : asOf < validationEnd ? 'VALIDATION' : 'TEST'
