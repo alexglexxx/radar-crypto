@@ -36,6 +36,11 @@ const cases = [
   ['features', 'id'],
   ['radar_signals', 'symbol'], // A permitted column exposed this table before the fix.
   ['signal_outcomes', 'id'],
+  // Legacy production objects created outside the migrations (audit 2026-10-23).
+  ['signals', 'id'],
+  ['radar_public_metrics', 'signal_id'],
+  ['public_current_signals', 'symbol'],
+  ['public_signal_history', 'symbol'],
 ]
 let failures = 0
 for (const [table, column] of cases) {
