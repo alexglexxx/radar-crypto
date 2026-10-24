@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto'
 import { type Candle } from '../../lib/features'
-import { BAR_MS } from './live-baseline-core'
+import { BAR_MS, mean } from './live-baseline-core'
 import { type FundingPoint } from './funding-archive'
+import { pct, type Check } from './evaluation-gate'
 
 const HOUR_MS = 3_600_000
 
@@ -106,4 +108,185 @@ export function applyOnePosition(selected: boolean[], nextFree: number[]): numbe
     if (selected[k]) { taken.push(k); k = nextFree[k] } else k++
   }
   return taken
+}
+
+// Fingerprint of what the candidate claims and does; a changed definition needs a new id.
+export function definitionHash(candidate: SwingCandidate): string {
+  return createHash('sha256').update(candidate.hypothesis + candidate.decide.toString()).digest('hex').slice(0, 12)
+}
+
+// Cuts every series to what is published in the lookback that ends at the decision
+// of candles[index]. Assumes one identical time grid, so one index serves every coin.
+export function windowContext(ctx: SwingContext, index: number, rules: SwingRules = GATE_V2_RULES) {
+  const grid = ctx.candles.values().next().value as Candle[]
+  const t = decisionTime(grid[index]), from = t - rules.lookbackMs
+  let lo = 0, hi = index
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (grid[mid].openTime >= from) hi = mid; else lo = mid + 1 }
+  const candles = new Map([...ctx.candles].map(([s, c]) => [s, c.slice(lo, index + 1)]))
+  const funding = new Map([...ctx.funding].map(([s, f]) => [s, f.filter(p => p.calcTime > from && p.calcTime <= t)]))
+  return { ctx: { candles, funding } as SwingContext, index: index - lo }
+}
+
+export type SwingStage = 'desarrollo' | 'examen'
+
+type Rates = { tp_rate: number; sl_rate: number; timeout_rate: number; mean_hours: number }
+
+export type SwingResult = {
+  candidate: { id: string; kind: SwingCandidate['kind']; hypothesis: string; definition: string }
+  stage: SwingStage
+  rules: SwingRules
+  verdict: 'APRUEBA DESARROLLO' | 'CANDIDATO A PAPEL' | 'RECHAZADO'
+  checks: Check[]
+  metrics: {
+    decisions: number; trades: number; leak_checks: number; leak_divergences: number
+    mean_net: number | null; baseline_net: number | null; excess: number | null; p_outperformance: number | null
+    net_cost: number | null; net_stress_cost: number | null
+    tp_rate: number | null; sl_rate: number | null; timeout_rate: number | null; mean_hours: number | null
+    random: Rates
+    by_asset: { symbol: string; trades: number; excess: number | null; tp_rate: number | null }[]
+    by_year: { from: string; to: string; trades: number; excess: number | null }[]
+  }
+}
+
+const rates = (trades: SwingTrade[]): Rates => ({
+  tp_rate: trades.filter(t => t.reason === 'tp').length / trades.length,
+  sl_rate: trades.filter(t => t.reason === 'sl').length / trades.length,
+  timeout_rate: trades.filter(t => t.reason === 'time').length / trades.length,
+  mean_hours: mean(trades.map(t => t.hours)),
+})
+
+// A throw on either side counts as a divergence: reading outside the window fails here.
+function sameDecision(candidate: SwingCandidate, ctx: SwingContext, symbol: string, index: number, rules: SwingRules) {
+  const window = windowContext(ctx, index, rules)
+  try { return candidate.decide(ctx, symbol, index) === candidate.decide(window.ctx, symbol, window.index) } catch { return false }
+}
+
+type Options = { stage: SwingStage; periodStart: number; periodEnd: number; yearStarts: number[]; rules?: SwingRules }
+type Taken = { symbol: string; time: number; trade: SwingTrade }
+
+// ctx: closed 15m candles of every coin on one identical time grid, plus funding.
+// yearStarts: decision times where each year begins; the last year runs to periodEnd.
+export function evaluateSwingCandidate(candidate: SwingCandidate, ctx: SwingContext,
+  { stage, periodStart, periodEnd, yearStarts, rules = GATE_V2_RULES }: Options): SwingResult {
+  const symbols = [...ctx.candles.keys()]
+  const grid0 = ctx.candles.get(symbols[0])!
+  for (const symbol of symbols) {
+    const candles = ctx.candles.get(symbol)!
+    if (candles.length !== grid0.length || candles.some((c, i) => c.openTime !== grid0[i].openTime)) {
+      throw new Error('Assets need an identical time grid')
+    }
+  }
+  const tables = new Map(symbols.map(s => [s, buildTradeTable(ctx.candles.get(s)!, periodStart, periodEnd, rules)]))
+  const times = tables.get(symbols[0])!.times
+  if (!times.length) throw new Error('No decision points in the period')
+  const baseline = new Map(symbols.map(s => [s, mean(tables.get(s)!.trades.map(t => t.net))]))
+
+  // 1. Lookahead: the decision must not change when every series keeps only the lookback.
+  let leakChecks = 0, leaks = 0
+  for (const symbol of symbols) {
+    const { trades } = tables.get(symbol)!
+    const count = Math.min(rules.leakChecksPerAsset, trades.length)
+    const positions = [...new Set(Array.from({ length: count }, (_, k) => Math.floor((k + 0.5) * trades.length / count)))]
+    for (const k of positions) {
+      leakChecks++
+      if (!sameDecision(candidate, ctx, symbol, trades[k].decisionIndex, rules)) leaks++
+    }
+  }
+
+  // 2. Decisions on every table entry (a throw aborts the run), then one position per coin.
+  let decisions = 0
+  const selected = new Map<string, boolean[]>()
+  const taken: Taken[] = []
+  for (const symbol of symbols) {
+    const table = tables.get(symbol)!
+    const sel = table.trades.map(t => candidate.decide(ctx, symbol, t.decisionIndex))
+    decisions += sel.filter(Boolean).length
+    selected.set(symbol, sel)
+    for (const k of applyOnePosition(sel, table.nextFree)) taken.push({ symbol, time: table.times[k], trade: table.trades[k] })
+  }
+
+  const excessOf = (group: Taken[], base: (t: Taken) => number) =>
+    group.length ? mean(group.map(t => t.trade.net)) - mean(group.map(base)) : null
+  const meanNet = taken.length ? mean(taken.map(t => t.trade.net)) : null
+  const baselineNet = taken.length ? mean(taken.map(t => baseline.get(t.symbol)!)) : null
+  const excess = excessOf(taken, t => baseline.get(t.symbol)!)
+
+  // 3. p-value. Each coin is shifted on its own, then the one-position rule is reapplied:
+  // the null keeps how often and how clustered the candidate buys, not when.
+  let p: number | null = null
+  if (excess != null) {
+    let state = rules.seed >>> 0, upper = 0
+    const next = () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 0x100000000 }
+    for (let it = 0; it < rules.permutations; it++) {
+      let sum = 0, base = 0, count = 0
+      for (const symbol of symbols) {
+        const sel = selected.get(symbol)!, n = sel.length, table = tables.get(symbol)!
+        const shift = 1 + Math.floor(next() * (n - 1))
+        const shifted = sel.map((_, k) => sel[(k - shift + n) % n])
+        for (const k of applyOnePosition(shifted, table.nextFree)) {
+          sum += table.trades[k].net; base += baseline.get(symbol)!; count++
+        }
+      }
+      if (count > 0 && (sum - base) / count >= excess) upper++
+    }
+    p = (upper + 1) / (rules.permutations + 1)
+  }
+
+  const byAsset = symbols.map(symbol => {
+    const group = taken.filter(t => t.symbol === symbol)
+    return { symbol, trades: group.length, excess: excessOf(group, () => baseline.get(symbol)!),
+      tp_rate: group.length ? rates(group.map(t => t.trade)).tp_rate : null }
+  })
+  // Each year is judged against the same coin's random entries inside that year.
+  const byYear = yearStarts.map((start, y) => {
+    const end = yearStarts[y + 1] ?? periodEnd
+    const inYear = (t: number) => t >= start && t < end
+    const yearBase = new Map(symbols.map(s => {
+      const table = tables.get(s)!
+      const nets = table.trades.filter((_, k) => inYear(table.times[k])).map(t => t.net)
+      return [s, nets.length ? mean(nets) : 0]
+    }))
+    const group = taken.filter(t => inYear(t.time))
+    const lastTime = times.filter(inYear).at(-1)
+    return { from: new Date(start).toISOString(), to: lastTime == null ? '—' : new Date(lastTime).toISOString(),
+      trades: group.length, excess: excessOf(group, t => yearBase.get(t.symbol)!) }
+  })
+
+  const ownRates = taken.length ? rates(taken.map(t => t.trade)) : null
+  const netStress = taken.length ? mean(taken.map(t => t.trade.netStress)) : null
+  const positiveAssets = byAsset.filter(a => a.excess != null && a.excess > 0).length
+  const positiveYears = byYear.filter(y => y.excess != null && y.excess > 0).length
+  const checks: Check[] = [
+    { id: 'no-lookahead', label: 'No mira el futuro (ni más de 30 días atrás)', passed: leaks === 0,
+      value: `${leaks} de ${leakChecks} puntos cambian`, required: '0 cambios' },
+    { id: 'sample', label: 'Muestra suficiente', passed: taken.length >= rules.minTrades,
+      value: `${taken.length} operaciones (${decisions} decisiones de compra)`, required: `≥ ${rules.minTrades}` },
+    { id: 'beats-random', label: 'Le gana al azar', passed: excess != null && excess > 0 && p != null && p < rules.alpha,
+      value: `${pct(excess)} por operación (p ${p == null ? '—' : p.toFixed(3)})`, required: `> 0 y p < ${rules.alpha}` },
+    { id: 'net-of-costs', label: 'Gana después de comisiones', passed: meanNet != null && meanNet > 0,
+      value: `${pct(meanNet)} con ${rules.costRoundTrip * 1e4} bps (${pct(netStress)} con ${rules.stressCostRoundTrip * 1e4} bps)`,
+      required: '> 0' },
+    { id: 'stable', label: 'Estable en el tiempo', passed: positiveYears === byYear.length,
+      value: `${positiveYears} de ${byYear.length} años le ganan al azar`, required: `${byYear.length} de ${byYear.length}` },
+    { id: 'breadth', label: 'No depende de una sola moneda', passed: positiveAssets >= rules.minPositiveAssets,
+      value: `${positiveAssets} de ${symbols.length} monedas le ganan al azar`, required: `≥ ${rules.minPositiveAssets}` },
+  ]
+  const passed = checks.every(c => c.passed)
+
+  return {
+    candidate: { id: candidate.id, kind: candidate.kind, hypothesis: candidate.hypothesis, definition: definitionHash(candidate) },
+    stage,
+    rules,
+    verdict: !passed ? 'RECHAZADO' : stage === 'examen' ? 'CANDIDATO A PAPEL' : 'APRUEBA DESARROLLO',
+    checks,
+    metrics: {
+      decisions, trades: taken.length, leak_checks: leakChecks, leak_divergences: leaks,
+      mean_net: meanNet, baseline_net: baselineNet, excess, p_outperformance: p,
+      net_cost: meanNet, net_stress_cost: netStress,
+      tp_rate: ownRates?.tp_rate ?? null, sl_rate: ownRates?.sl_rate ?? null,
+      timeout_rate: ownRates?.timeout_rate ?? null, mean_hours: ownRates?.mean_hours ?? null,
+      random: rates(symbols.flatMap(s => tables.get(s)!.trades)),
+      by_asset: byAsset, by_year: byYear,
+    },
+  }
 }
