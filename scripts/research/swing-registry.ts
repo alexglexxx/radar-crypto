@@ -129,12 +129,12 @@ export function assertStageAllowed(input: {
   if (dirty) throw new Error('Examen needs a clean tree: there are uncommitted changes')
   const examined = new Set(exam.map(r => r.candidate))
   for (const c of candidates) {
-    if (c.kind === 'control') throw new Error(`Candidate ${c.id} is a control; controls never reach the exam`)
     if (examined.has(c.id)) throw new Error(`Candidate ${c.id} was already examined; the exam runs once`)
     const last = dev.filter(r => r.candidate === c.id).at(-1)
     if (!last || last.verdict !== 'APRUEBA DESARROLLO') {
       throw new Error(`Candidate ${c.id} has no approved development run as its latest development row`)
     }
+    if (c.kind === 'control') throw new Error(`Candidate ${c.id} is a control; controls never reach the exam`)
   }
   const total = new Set([...examined, ...candidates.map(c => c.id)])
   if (total.size > rules.maxExamCandidates) {
