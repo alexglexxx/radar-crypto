@@ -161,7 +161,7 @@ Migration `20261024120000_job_runs_health.sql`, rollback in `supabase/rollback/`
 
 **Daily news removed (2026-10-24).** It never ran successfully: `news_briefings` and `news_items` have 0 rows in production because production has no `OPENAI_API_KEY` (and no `NEWS_AI_MODEL`; the code fell back to the unverified `gpt-6-luna`), so `/api/daily-news` returned HTTP 500 every day at 13:00 UTC. Vercel Hobby keeps runtime logs for one hour, so nobody saw it. By decision of Alex the cron, the API routes and the dashboard section were removed; the empty tables and public news views stay. To restore: recover `app/api/daily-news`, `app/api/news-briefing` and `app/components/NewsIntelligence.tsx` from commit `1f88ecb` (the daily route already records its runs as job `daily-news`), set the key and an explicit model in Vercel, and re-add the cron to `vercel.json`.
 
-**Repo migrations vs. `supabase_migrations.schema_migrations`.** Production versions were assigned when the SQL was applied through the Supabase tools, so they do not match the file names. Do not use `supabase db push`; apply reviewed SQL.
+**Repo migrations vs. `supabase_migrations.schema_migrations`.** Older production versions were assigned when the SQL was applied through the Supabase tools, so they do not match the file names; from 20261021200000 on, the record uses the file version. Do not use `supabase db push`; apply reviewed SQL.
 
 | Repo file | Production record |
 | --- | --- |
@@ -171,5 +171,5 @@ Migration `20261024120000_job_runs_health.sql`, rollback in `supabase/rollback/`
 | `20261001091000_hardening_public_views.sql` | `20261002002046` |
 | `20261001092000_hardening_rls_invoker_views.sql` | `20261002002120` |
 | `20261001093000_hardening_remove_legacy_public_policies.sql` | `20261002002145` |
-| `20261021200000_lock_down_research_access.sql` | not recorded (applied in the SQL Editor on 2026-10-24) |
-| `20261024120000_job_runs_health.sql` | pending |
+| `20261021200000_lock_down_research_access.sql` | `20261021200000` (applied in the SQL Editor ~00:38 UTC, recorded 2026-10-24) |
+| `20261024120000_job_runs_health.sql` | `20261024120000` (SQL Editor, 2026-10-24 ~03:28 UTC); first run recorded 03:30:39Z, ingest 200, 4/4 |

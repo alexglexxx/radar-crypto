@@ -1,0 +1,4 @@
+date	candidate	kind	stage	rules	period	commit	definition	verdict	trades	excess	p_outperformance	net_cost	tp_rate	sl_rate	timeout_rate	leak_divergences
+2026-10-24	swing-random	control	desarrollo	gate-v2	2023-10 a 2026-09	d6a3808	549b6faaa163	RECHAZADO	1805	0.000191007	0.247376	-0.00162504	0.373407	0.422161	0.204432	0
+2026-10-24	swing-lookahead	control	desarrollo	gate-v2	2023-10 a 2026-09	d6a3808	1e59281df068	RECHAZADO	1602	0.0419193	0.000499750	0.0400000	1.00000	0.00000	0.00000	526
+2026-10-24	swing-btc-lookahead	control	desarrollo	gate-v2	2023-10 a 2026-09	d6a3808	1e051b987672	RECHAZADO	2392	0.0114929	0.000499750	0.00962093	0.512960	0.285535	0.201505	796

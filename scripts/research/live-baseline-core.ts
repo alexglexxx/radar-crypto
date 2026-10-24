@@ -58,7 +58,7 @@ export function circularPValue(
   observed: number, baseline: number, signalIndices: Map<string, number[]>,
   returns: Map<string, number[]>, iterations: number, seed: number,
 ) {
-  let state = seed >>> 0, lower = 0, twoSided = 0
+  let state = seed >>> 0, lower = 0, upper = 0, twoSided = 0
   const next = () => {
     state ^= state << 13; state ^= state >>> 17; state ^= state << 5
     return (state >>> 0) / 0x100000000
@@ -75,8 +75,10 @@ export function circularPValue(
     }
     const sample = sum / count
     if (sample <= observed) lower++
+    if (sample >= observed) upper++
     if (Math.abs(sample - baseline) >= Math.abs(observed - baseline)) twoSided++
   }
   return { one_sided_underperformance: (lower + 1) / (iterations + 1),
+    one_sided_outperformance: (upper + 1) / (iterations + 1),
     two_sided: (twoSided + 1) / (iterations + 1) }
 }
