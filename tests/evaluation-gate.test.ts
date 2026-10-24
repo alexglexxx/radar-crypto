@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { type Candle } from '../lib/features'
 import { BAR_MS, candleCloseTime, replayLiveSignal } from '../lib/live-window'
 import { GATE_RULES, evaluateCandidate, renderFiche, type Candidate } from '../scripts/research/evaluation-gate'
-import { CANDIDATES, liveWindowDecision } from '../scripts/research/gate-candidates'
+import { CANDIDATES, HIGH_VOLATILITY_CUT, liveWindowDecision } from '../scripts/research/gate-candidates'
 import rows from './fixtures/btcusdt-15m.json'
 
 const START = Date.UTC(2024, 0, 1)
@@ -99,5 +99,19 @@ describe('v1.1-live gate candidate', () => {
       if (gate?.decision === 'LONG') longs++
     }
     expect(longs).toBeGreaterThan(0)
+  })
+
+  it('v1.2-trend-vol keeps only v1.1-live LONGs in an uptrend with high volatility', () => {
+    const candidate = CANDIDATES['v1.2-trend-vol']
+    let kept = 0, dropped = 0
+    for (let i = 248; i < archive.length - 1; i++) {
+      const gate = liveWindowDecision(archive, i)
+      const f = gate?.features
+      const expected = gate?.decision === 'LONG' && f!.ema_50! > f!.ema_200! && f!.volatility! >= HIGH_VOLATILITY_CUT
+      expect(candidate.decide(archive, i)).toBe(expected)
+      expect(candidate.decide(archive.slice(0, i + 1), i)).toBe(expected)
+      if (gate?.decision === 'LONG') expected ? kept++ : dropped++
+    }
+    expect(dropped).toBeGreaterThan(0)
   })
 })

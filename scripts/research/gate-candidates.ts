@@ -22,7 +22,27 @@ function draw(archive: Candle[], index: number) {
   return (x >>> 0) / 0x100000000
 }
 
+// Upper volatility tercile of every eligible candle, 4 assets pooled,
+// 2023-10..2026-09: the cut of the descriptive split in historical-baseline.ts,
+// frozen here. It was read from the same months the gate runs on.
+export const HIGH_VOLATILITY_CUT = 0.0144746
+
 export const CANDIDATES: Record<string, Candidate> = {
+  'v1.2-trend-vol': {
+    id: 'v1.2-trend-vol',
+    kind: 'strategy',
+    hypothesis: 'Las señales LONG de v1.1-live solo cuando EMA50 > EMA200 y la volatilidad de 20 velas está en el tercil alto ' +
+      `(≥ ${HIGH_VOLATILITY_CUT}) le ganan al azar. Se declara 4h porque ahí se vieron ambos cortes. ` +
+      'Los dos cortes y el umbral salieron de mirar estos 36 meses: pasar aquí es necesario pero no suficiente.',
+    horizon: '4h',
+    decide: (archive, index) => {
+      const replay = liveWindowDecision(archive, index)
+      if (replay?.decision !== 'LONG') return false
+      const { ema_50, ema_200, volatility } = replay.features
+      return ema_50 != null && ema_200 != null && volatility != null &&
+        ema_50 > ema_200 && volatility >= HIGH_VOLATILITY_CUT
+    },
+  },
   'v1.1-live': {
     id: 'v1.1-live',
     kind: 'strategy',
