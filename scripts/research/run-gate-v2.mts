@@ -37,10 +37,9 @@ for (const id of ids) {
 const candidates = ids.map(id => SWING_CANDIDATES[id])
 
 const registryFile = 'docs/evaluation/registry-v2.tsv'
-if (!existsSync(registryFile)) writeFileSync(registryFile, REGISTRY_V2_HEADER + '\n')
 const dirtyOutput = execFileSync('git', ['status', '--porcelain', '--', 'scripts', 'lib'], { encoding: 'utf8' }).trim()
 // Registry rules are enforced before any data is downloaded.
-assertStageAllowed({ stage, candidates, registry: parseRegistryV2(readFileSync(registryFile, 'utf8')), dirty: dirtyOutput !== '' })
+assertStageAllowed({ stage, candidates, registry: parseRegistryV2(existsSync(registryFile) ? readFileSync(registryFile, 'utf8') : ''), dirty: dirtyOutput !== '' })
 
 const { loadFrom, periodFrom, periodTo, years } = STAGES[stage]
 const startMs = monthStart(loadFrom), endMs = monthStart(periodTo, 1) - 1
@@ -83,10 +82,12 @@ mkdirSync('docs/evaluation/fichas', { recursive: true })
 for (const candidate of candidates) {
   console.log(`${candidate.id}: evaluating...`)
   const result = evaluateSwingCandidate(candidate, { candles, funding }, { stage, periodStart, periodEnd, yearStarts })
+  // The attempt is recorded first, whatever the verdict, so a later write failure cannot lose it.
+  if (!existsSync(registryFile)) writeFileSync(registryFile, REGISTRY_V2_HEADER + '\n')
+  appendFileSync(registryFile, swingRegistryRow(result, info) + '\n')
   writeFileSync(`reports/gate-v2/${stage}-${candidate.id}.json`,
     JSON.stringify({ ...result, info, spot_files: spotManifest, funding_files: fundingManifest }, null, 2) + '\n')
   writeFileSync(`docs/evaluation/fichas/${info.generatedAt}-${stage}-${candidate.id}.md`, renderSwingFiche(result, info))
-  appendFileSync(registryFile, swingRegistryRow(result, info) + '\n')
   const m = result.metrics
   console.log(`${candidate.id}: ${result.verdict} · ${m.trades} operaciones · frente al azar ${pct(m.excess)} ` +
     `(p ${m.p_outperformance?.toFixed(3) ?? '—'}) · neto ${pct(m.net_cost)} · fugas ${m.leak_divergences}/${m.leak_checks}`)
