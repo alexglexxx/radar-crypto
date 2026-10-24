@@ -31,6 +31,7 @@ jobs:
           SYMBOLS: ${{ inputs.symbols || 'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT' }}
         run: npx tsx scripts/backtest-walkforward.ts
       - name: Upload walk-forward report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: radar-walkforward-1h

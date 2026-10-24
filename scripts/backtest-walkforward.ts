@@ -7,7 +7,8 @@ const exec = promisify(execFile)
 type Candle={openTime:number;open:number;high:number;low:number;close:number;volume:number}
 type Obs={symbol:string;time:number;score:number;r4:number;regime:string;volatility:string}
 const SYMBOLS=(process.env.SYMBOLS??'BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT').split(',').map(s=>s.trim()).filter(Boolean)
-const MONTHS=Math.max(12,Number(process.env.MONTHS??24))
+const MONTHS=Number(process.env.MONTHS??24)
+if(!Number.isInteger(MONTHS)||MONTHS<15)throw new Error('MONTHS must be an integer >= 15 to support at least 12 training months and 3 test months.')
 const INTERVAL='1h'
 const COSTS_BPS=[15,20,25]
 const COST=(10+5)/10000
@@ -15,6 +16,8 @@ const DATA_DIR=path.join(process.cwd(),'.backtest-cache-discovery')
 const REPORT_DIR=path.join(process.cwd(),'reports')
 
 function monthKeys(a:Date,b:Date){const out:string[]=[];const d=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),1));const e=new Date(Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),1));while(d<=e){out.push(d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'));d.setUTCMonth(d.getUTCMonth()+1)}return out}
+function addMonthsUTC(date:Date,months:number){return new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+months,1))}
+function buildFolds(start:Date,months:number){const folds:string[][]=[];for(let offset=0;offset+15<=months;offset+=3){const trainStart=addMonthsUTC(start,offset),testStart=addMonthsUTC(start,offset+12),testEnd=addMonthsUTC(start,offset+15);const fmt=(d:Date)=>d.toISOString().slice(0,10);folds.push([fmt(trainStart),fmt(testStart),fmt(testStart),fmt(testEnd)])}return folds}
 async function download(symbol:string,m:string){const file=path.join(DATA_DIR,symbol+'-'+INTERVAL+'-'+m+'.zip');try{await fs.access(file);return file}catch{}const url='https://data.binance.vision/data/spot/monthly/klines/'+symbol+'/'+INTERVAL+'/'+symbol+'-'+INTERVAL+'-'+m+'.zip';const res=await fetch(url);if(res.status===404)return null;if(!res.ok)throw new Error('Binance archive '+res.status+': '+url);await fs.mkdir(DATA_DIR,{recursive:true});await fs.writeFile(file,Buffer.from(await res.arrayBuffer()));return file}
 async function unzip(file:string){const dir=path.join(DATA_DIR,'tmp-'+Date.now()+'-'+Math.random().toString(36).slice(2));await fs.mkdir(dir,{recursive:true});await exec('unzip',['-oq',file,'-d',dir]);const name=(await fs.readdir(dir)).find(x=>x.endsWith('.csv'));if(!name)throw new Error('No CSV in '+file);const lines=(await fs.readFile(path.join(dir,name),'utf8')).trim().split(/\r?\n/);const start=lines[0]?.toLowerCase().includes('open time')?1:0;const out:Candle[]=[];for(let i=start;i<lines.length;i++){const r=lines[i].split(',');if(r.length<6)continue;const rawT=Number(r[0]),t=rawT>1e14?Math.floor(rawT/1000):rawT;const[o,h,l,c,v]=r.slice(1,6).map(Number);if([t,o,h,l,c,v].every(Number.isFinite))out.push({openTime:t,open:o,high:h,low:l,close:c,volume:v})}await fs.rm(dir,{recursive:true,force:true});return out}
 async function load(symbol:string,start:number,end:number){const out:Candle[]=[];for(const m of monthKeys(new Date(start),new Date(end))){const f=await download(symbol,m);if(f)out.push(...await unzip(f))}return out.filter(c=>c.openTime>=start&&c.openTime<=end).sort((a,b)=>a.openTime-b.openTime)}
@@ -36,17 +39,14 @@ function fmt(v:number|null){return v===null?'N/A':(v*100).toFixed(3)+'%'}
 async function main(){
  const now=new Date(),end=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1)-1),start=new Date(Date.UTC(end.getUTCFullYear(),end.getUTCMonth()-(MONTHS-1),1))
  const all:Obs[]=[];const coverage:any[]=[]
- for(const symbol of SYMBOLS){const c=await load(symbol,start.getTime(),end.getTime());const expected=Math.floor((end.getTime()-start.getTime())/3600000)+1;let gaps=0;for(let i=1;i<c.length;i++)if((c[i].openTime-c[i-1].openTime)/3600000>1.01)gaps++;coverage.push({symbol,expected,actual:c.length,gaps});if(c.length<expected*.9)throw new Error('Coverage failure '+symbol+' '+c.length+'/'+expected)
+ for(const symbol of SYMBOLS){const c=await load(symbol,start.getTime(),end.getTime());const expected=Math.floor((end.getTime()-start.getTime())/3600000)+1;let gaps=0;for(let i=1;i<c.length;i++)if((c[i].openTime-c[i-1].openTime)/3600000>1.01)gaps++;coverage.push({symbol,expected,actual:c.length,gaps});if(c.length!==expected)throw new Error('Coverage failure '+symbol+' '+c.length+'/'+expected+'; exact hourly coverage is required for walk-forward research.')
+  const seen=new Set<number>();for(let i=0;i<c.length;i++){const x=c[i];if(seen.has(x.openTime))throw new Error('Duplicate candle timestamp '+symbol+' '+new Date(x.openTime).toISOString());seen.add(x.openTime);if(!(x.open>0&&x.high>0&&x.low>0&&x.close>0&&x.volume>=0&&x.high>=Math.max(x.open,x.close,x.low)&&x.low<=Math.min(x.open,x.close,x.high)))throw new Error('Invalid OHLCV candle '+symbol+' '+new Date(x.openTime).toISOString());if(i>0&&x.openTime-c[i-1].openTime!==3600000)throw new Error('Hourly gap or irregular timestamp '+symbol+' '+new Date(c[i-1].openTime).toISOString()+' -> '+new Date(x.openTime).toISOString())}
   const a=c.map(x=>x.close),v=c.map(x=>x.volume),e20=emaSeries(a,20),e50=emaSeries(a,50),e200=emaSeries(a,200),e12=emaSeries(a,12),e26=emaSeries(a,26),macd=a.map((_,i)=>e12[i]!==null&&e26[i]!==null?e12[i]! - e26[i]!:null);const mv=macd.filter((x):x is number=>x!==null),sv=emaSeries(mv,9),hist:(number|null)[]=Array(a.length).fill(null);let mi=0;for(let i=0;i<a.length;i++)if(macd[i]!==null){if(sv[mi]!==null)hist[i]=macd[i]! - sv[mi]!;mi++}const vs=smaSeries(v,20),vr=vs.map((x,i)=>x!==null&&x>0?v[i]/x:null),rsi=rsiSeries(a),atr=atrSeries(c,14)
   for(let i=220;i<c.length-24;i++){const atrPct=atr[i]!==null&&c[i].close>0?atr[i]!/c[i].close:null;const trend=e50[i]!==null&&e200[i]!==null?(e50[i]!>e200[i]!*(1.01)?'bull':e50[i]!<e200[i]!*(0.99)?'bear':'sideways'):'sideways';const volatility=atrPct===null?'normal':atrPct<0.004?'low':atrPct>0.012?'high':'normal';all.push({symbol,time:c[i].openTime,score:scoreAt(i,c,e20,e50,e200,rsi,hist,vr,atr),r4:c[i+5].open/c[i+1].open-1,regime:trend,volatility})}
  }
- // Fold boundaries are fixed by calendar dates. Threshold selection is train-only.
- const folds=[
-  ['2024-10-01','2025-10-01','2025-10-01','2026-01-01'],
-  ['2025-01-01','2026-01-01','2026-01-01','2026-04-01'],
-  ['2025-04-01','2026-04-01','2026-04-01','2026-07-01'],
-  ['2025-07-01','2026-07-01','2026-07-01','2026-10-01']
- ]
+ // Rolling calendar folds are derived from the requested window; threshold selection is train-only.
+ const folds=buildFolds(start,MONTHS)
+ if(!folds.length)throw new Error('No walk-forward folds could be built from MONTHS='+MONTHS)
  const thresholds=[60,65,70,75,80,85,90]
  const results:any[]=[]
  for(let k=0;k<folds.length;k++){
@@ -55,10 +55,13 @@ async function main(){
   const trainEnd=Date.parse(tr1+'T00:00:00Z')
   const testStart=Date.parse(te0+'T00:00:00Z')
   const testEnd=Date.parse(te1+'T00:00:00Z')
-  const train=all.filter(o=>o.time>=trainStart&&o.time<trainEnd)
-  const test=all.filter(o=>o.time>=testStart&&o.time<testEnd)
+  const HOLD_MS=5*3600000 // Signal candle i exits at candle i+5 open; purge outcomes crossing split boundaries.
+  const train=all.filter(o=>o.time>=trainStart&&o.time+HOLD_MS<trainEnd)
+  const test=all.filter(o=>o.time>=testStart&&o.time+HOLD_MS<testEnd)
+  // Select thresholds using the same non-overlapping 4h trade definition used for primary OOS evaluation.
+  // Overlapping training results are retained for diagnostics only, never for selection.
   const trainStats=thresholds
-   .map(threshold=>stats(train,threshold))
+   .map(threshold=>({...nonOverlapping(train,threshold),overlapping:stats(train,threshold)}))
    .filter(s=>s.trades>=100)
    .sort((a,b)=>{
     const expectancy=(b.expectancy??-1e9)-(a.expectancy??-1e9)
@@ -73,6 +76,7 @@ async function main(){
    test:te0+'..'+te1,
    selectedThreshold,
    trainBest:trainStats[0]??null,
+   trainThresholdCandidates:trainStats,
    testStats:oos,
    testNonOverlapping:oosNonOverlap,
    fixed70:stats(test,70),
@@ -83,9 +87,14 @@ async function main(){
   results.push(foldResult)
   console.log('[walkforward] fold '+(k+1)+' train best='+selectedThreshold+' | OOS trades='+oos.trades+' win='+fmt(oos.winRate)+' exp='+fmt(oos.expectancy)+' | nonOverlap exp='+fmt(oosNonOverlap.expectancy))
  }
- const selected=results.map(r=>r.selectedThreshold),oos=results.map(r=>r.testNonOverlapping),positive=oos.filter((r:any)=>(r.expectancy??-1)>=0).length
- const report={report_name:'radar-crypto-walkforward-1h',generated_at:new Date().toISOString(),production_untouched:true,methodology:{train_months:12,test_months:3,thresholds,cost_bps_round_trip:15,cost_sensitivity_bps:COSTS_BPS,threshold_selection:'train-only; highest training expectancy with >=100 observations; OOS never used for selection.',event_study_caveat:'Signals overlap at 1h frequency. testNonOverlapping enforces a 4h cooldown/hold proxy independently per symbol and is the primary OOS diagnostic.',baseline_note:'Baseline uses the same next-open-to-4h-open execution model with a 4h per-symbol cooldown; signal trades are non-overlapping per symbol.',execution_model:'Signal evaluated on candle i close; entry at candle i+1 open; hold 4 complete 1h candles; exit at candle i+5 open. No same-candle execution.',regime_model:'Trend: EMA50 vs EMA200 with 1% hysteresis. Volatility: ATR14/close, low <0.4%, normal 0.4%-1.2%, high >1.2%. These labels are descriptive diagnostics, not optimized trading rules.',not_deployable:true},coverage,folds:results,summary:{folds:results.length,selectedThresholds:selected,oosNonOverlappingExpectancies:oos.map((r:any)=>r.expectancy),positiveOosFolds:positive}}
+ const selected=results.map(r=>r.selectedThreshold),oos=results.map(r=>r.testNonOverlapping),positive=oos.filter((r:any)=>(r.expectancy??-1)>0).length
+ const report={report_name:'radar-crypto-walkforward-1h',generated_at:new Date().toISOString(),production_untouched:true,methodology:{research_only:true,signal_model:'1h research proxy using independently coded scoreAt; it is not an exact invocation of production calculateFeatures/calculateRadarScore and must not be treated as the production baseline.',train_months:12,test_months:3,thresholds,cost_bps_round_trip:15,cost_sensitivity_bps:COSTS_BPS,threshold_selection:'train-only; highest non-overlapping 4h training expectancy with >=100 trades; overlapping training metrics are diagnostics only; OOS never used for selection.',event_study_caveat:'Signals overlap at 1h frequency. testNonOverlapping enforces a 4h cooldown/hold proxy independently per symbol and is the primary OOS diagnostic. Four-hour outcome windows crossing train/test boundaries are purged.',baseline_note:'Baseline uses the same next-open-to-4h-open execution model with a 4h per-symbol cooldown; signal trades are non-overlapping per symbol.',execution_model:'Signal evaluated on candle i close; entry at candle i+1 open; hold 4 complete 1h candles; exit at candle i+5 open. No same-candle execution.',regime_model:'Trend: EMA50 vs EMA200 with 1% hysteresis. Volatility: ATR14/close, low <0.4%, normal 0.4%-1.2%, high >1.2%. These labels are descriptive diagnostics, not optimized trading rules.',not_deployable:true},coverage,folds:results,summary:{folds:results.length,selectedThresholds:selected,oosNonOverlappingExpectancies:oos.map((r:any)=>r.expectancy),positiveOosFolds:positive,meanOosNonOverlappingExpectancy:oos.length?oos.reduce((sum:number,r:any)=>sum+(r.expectancy??0),0)/oos.length:null,qualification:{status:positive===results.length&&results.every((r:any)=>r.costSensitivity.find((c:any)=>c.cost_bps_round_trip===25)?.nonOverlapping.expectancy>0)?'candidate_for_further_validation':'not_qualified',rule:'Every non-overlapping OOS fold must have positive net expectancy at 15 bps round-trip and remain positive at 25 bps round-trip. This is research qualification only, not permission for live trading.'}}}
  await fs.mkdir(REPORT_DIR,{recursive:true});await fs.writeFile(path.join(REPORT_DIR,'backtest-walkforward-1h.json'),JSON.stringify(report,null,2)+'\n')
  console.log('[walkforward] positive non-overlap OOS folds='+positive+'/'+results.length)
+ const qualification=(report as any).summary.qualification.status
+ if(qualification!=='candidate_for_further_validation'){
+  console.error('[walkforward] QUALIFICATION FAILED: '+qualification+'; research run must not be green.')
+  process.exitCode=1
+ }
 }
 main().catch(e=>{console.error('[walkforward] Error:',e);process.exit(1)})
