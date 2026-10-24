@@ -3,7 +3,8 @@ import { type Candle } from '../lib/features'
 import { BAR_MS } from '../scripts/research/live-baseline-core'
 import {
   GATE_V2_RULES, applyOnePosition, buildTradeTable, decisionTime, definitionHash, evaluateSwingCandidate,
-  simulateTrade, windowContext, type SwingCandidate, type SwingContext, type SwingStage,
+  shiftPValue, simulateTrade, windowContext, type SwingCandidate, type SwingContext, type SwingStage,
+  type SwingTrade, type TradeTable,
 } from '../scripts/research/swing-gate'
 import { SWING_CANDIDATES } from '../scripts/research/swing-candidates'
 
@@ -193,7 +194,9 @@ describe('swing gate evaluation', () => {
     expect(result.verdict).toBe('APRUEBA DESARROLLO')
     expect(result.stage).toBe('desarrollo')
     expect(result.metrics.leak_divergences).toBe(0)
-    expect(result.metrics.leak_checks).toBe(200)
+    // 25 spread points plus 25 buy points per coin; points in both count once.
+    expect(result.metrics.leak_checks).toBeGreaterThan(150)
+    expect(result.metrics.leak_checks).toBeLessThanOrEqual(200)
     expect(result.metrics.tp_rate).toBeGreaterThan(0.9)
     expect(result.metrics.trades).toBeGreaterThanOrEqual(200)
     expect(result.metrics.excess).toBeGreaterThan(0.03)
@@ -227,7 +230,34 @@ describe('swing gate evaluation', () => {
     const result = run(SWING_CANDIDATES['swing-lookahead'], PLAIN)
     expect(result.metrics.excess).toBeGreaterThan(0)
     expect(check(result, 'no-lookahead')).toBe(false)
+    // Half of the sample sits on its buy points, where it reads the future.
+    expect(result.metrics.leak_divergences).toBeGreaterThanOrEqual(80)
     expect(result.verdict).toBe('RECHAZADO')
+  })
+
+  it('catches a candidate that peeks at the next funding settlement', () => {
+    const funding = new Map(SYMBOLS.map((s, k) => [s, Array.from({ length: 1400 }, (_, j) => (
+      { calcTime: START + j * 8 * HOUR, intervalHours: 8, rate: (((j * 7919 + k) % 13) - 6) * 1e-5 }))]))
+    const peek: SwingCandidate = {
+      id: 'next-funding', kind: 'control', hypothesis: 'Mira el próximo funding.',
+      decide: (ctx, s, i) => {
+        const t = decisionTime(ctx.candles.get(s)![i])
+        const next = ctx.funding.get(s)!.find(p => p.calcTime > t)
+        return next != null && next.rate < 0
+      },
+    }
+    const result = run(peek, { candles: PLAIN.candles, funding })
+    expect(result.metrics.decisions).toBeGreaterThan(0)
+    expect(check(result, 'no-lookahead')).toBe(false)
+  })
+
+  it('counts a tie as reaching the observed excess: buying always gets p = 1', () => {
+    const always: SwingCandidate = { id: 'always', kind: 'control', hypothesis: 'Compra siempre.', decide: () => true }
+    const result = run(always, PLAIN)
+    expect(result.metrics.p_outperformance).toBe(1)
+    // A positive excess alone is not enough to beat random.
+    expect(result.metrics.excess).toBeGreaterThan(0)
+    expect(check(result, 'beats-random')).toBe(false)
   })
 
   it('catches swing-btc-lookahead', () => {
@@ -283,5 +313,44 @@ describe('swing gate evaluation', () => {
     expect(definitionHash({ ...spike })).toBe(hash)
     expect(definitionHash({ ...spike, decide: (ctx, s, i) => ctx.candles.get(s)![i].volume > 6 })).not.toBe(hash)
     expect(definitionHash({ ...spike, hypothesis: 'otra' })).not.toBe(hash)
+  })
+})
+
+describe('shiftPValue', () => {
+  const table = (nets: number[], nextFree: number[]): TradeTable => ({
+    trades: nets.map(net => ({ net }) as SwingTrade), times: nets.map((_, k) => k), nextFree })
+  const N = 10, SEED = 7
+  // The same xorshift the gate uses: one draw per coin per shift.
+  const shifts = (n: number) => {
+    let state = SEED >>> 0
+    const next = () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 0x100000000 }
+    return Array.from({ length: N }, () => 1 + Math.floor(next() * (n - 1)))
+  }
+
+  it('counts ties as reaching the observed excess and adds one to both sides', () => {
+    // Shift 1 moves the buy onto an equal trade (a tie); shift 2 onto a worse one.
+    const tables = new Map([['A', table([0.3, 0.3, 0.1], [1, 2, 3])]])
+    const result = shiftPValue(new Map([['A', [true, false, false]]]), tables, new Map([['A', 0.2]]), N, SEED)
+    const ties = shifts(3).filter(s => s === 1).length
+    expect(ties).toBeGreaterThan(0)
+    expect(ties).toBeLessThan(N)
+    expect(result.excess).toBeCloseTo(0.1, 12)
+    expect(result.p).toBe((ties + 1) / (N + 1))
+  })
+
+  it('reapplies the one-position rule after each shift', () => {
+    // Entry 0 blocks entry 1. Shift 1 buys 1 and then 2 (+0.9 and -1), which loses;
+    // moving only the taken trade would have landed on +0.9 alone and counted.
+    const tables = new Map([['A', table([0.2, 0.9, -1, 0], [2, 2, 3, 4])]])
+    const result = shiftPValue(new Map([['A', [true, true, false, false]]]), tables, new Map([['A', 0.025]]), N, SEED)
+    expect(shifts(4).filter(s => s === 1).length).toBeGreaterThan(0)
+    expect(result.excess).toBeCloseTo(0.175, 12)
+    expect(result.p).toBe(1 / (N + 1))
+  })
+
+  it('has no excess and no p without trades', () => {
+    const tables = new Map([['A', table([0.1, 0.2], [1, 2])]])
+    expect(shiftPValue(new Map([['A', [false, false]]]), tables, new Map([['A', 0.15]]), N, SEED))
+      .toEqual({ excess: null, p: null })
   })
 })

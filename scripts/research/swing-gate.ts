@@ -161,6 +161,38 @@ function sameDecision(candidate: SwingCandidate, ctx: SwingContext, symbol: stri
   try { return candidate.decide(ctx, symbol, index) === candidate.decide(window.ctx, symbol, window.index) } catch { return false }
 }
 
+// Pooled excess of the trades taken from a selection, summed in coin order and then
+// table order. The observed value and every shift go through this same expression,
+// so a shift that takes the same trades ties exactly instead of by the last ulp.
+function pooledExcess(selected: Map<string, boolean[]>, tables: Map<string, TradeTable>, baseline: Map<string, number>) {
+  let sum = 0, base = 0, count = 0
+  for (const [symbol, sel] of selected) {
+    const table = tables.get(symbol)!
+    for (const k of applyOnePosition(sel, table.nextFree)) { sum += table.trades[k].net; base += baseline.get(symbol)!; count++ }
+  }
+  return count > 0 ? (sum - base) / count : null
+}
+
+// Each coin is shifted on its own, then the one-position rule is reapplied:
+// the null keeps how often and how clustered the candidate buys, not when.
+// One-sided: shifts that reach the observed excess (ties included) count against it.
+export function shiftPValue(selected: Map<string, boolean[]>, tables: Map<string, TradeTable>,
+  baseline: Map<string, number>, permutations: number, seed: number) {
+  const excess = pooledExcess(selected, tables, baseline)
+  if (excess == null) return { excess, p: null }
+  let state = seed >>> 0, upper = 0
+  const next = () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 0x100000000 }
+  for (let it = 0; it < permutations; it++) {
+    const shifted = new Map([...selected].map(([symbol, sel]) => {
+      const n = sel.length, shift = 1 + Math.floor(next() * (n - 1))
+      return [symbol, sel.map((_, k) => sel[(k - shift + n) % n])]
+    }))
+    const sample = pooledExcess(shifted, tables, baseline)
+    if (sample != null && sample >= excess) upper++
+  }
+  return { excess, p: (upper + 1) / (permutations + 1) }
+}
+
 type Options = { stage: SwingStage; periodStart: number; periodEnd: number; yearStarts: number[]; rules?: SwingRules }
 type Taken = { symbol: string; time: number; trade: SwingTrade }
 
@@ -181,19 +213,7 @@ export function evaluateSwingCandidate(candidate: SwingCandidate, ctx: SwingCont
   if (!times.length) throw new Error('No decision points in the period')
   const baseline = new Map(symbols.map(s => [s, mean(tables.get(s)!.trades.map(t => t.net))]))
 
-  // 1. Lookahead: the decision must not change when every series keeps only the lookback.
-  let leakChecks = 0, leaks = 0
-  for (const symbol of symbols) {
-    const { trades } = tables.get(symbol)!
-    const count = Math.min(rules.leakChecksPerAsset, trades.length)
-    const positions = [...new Set(Array.from({ length: count }, (_, k) => Math.floor((k + 0.5) * trades.length / count)))]
-    for (const k of positions) {
-      leakChecks++
-      if (!sameDecision(candidate, ctx, symbol, trades[k].decisionIndex, rules)) leaks++
-    }
-  }
-
-  // 2. Decisions on every table entry (a throw aborts the run), then one position per coin.
+  // 1. Decisions on every table entry (a throw aborts the run), then one position per coin.
   let decisions = 0
   const selected = new Map<string, boolean[]>()
   const taken: Taken[] = []
@@ -205,32 +225,28 @@ export function evaluateSwingCandidate(candidate: SwingCandidate, ctx: SwingCont
     for (const k of applyOnePosition(sel, table.nextFree)) taken.push({ symbol, time: table.times[k], trade: table.trades[k] })
   }
 
+  // 2. Lookahead: the decision must not change when every series keeps only the lookback.
+  // Half the sample spreads over every decision point, half over the candidate's buys.
+  let leakChecks = 0, leaks = 0
+  const spread = (items: number[], count: number) => {
+    const length = Math.min(count, items.length)
+    return Array.from({ length }, (_, k) => items[Math.floor((k + 0.5) * items.length / length)])
+  }
+  for (const symbol of symbols) {
+    const { trades } = tables.get(symbol)!, sel = selected.get(symbol)!
+    const all = trades.map((_, k) => k), buys = all.filter(k => sel[k])
+    const half = Math.floor(rules.leakChecksPerAsset / 2)
+    for (const k of new Set([...spread(all, half), ...spread(buys, rules.leakChecksPerAsset - half)])) {
+      leakChecks++
+      if (!sameDecision(candidate, ctx, symbol, trades[k].decisionIndex, rules)) leaks++
+    }
+  }
+
   const excessOf = (group: Taken[], base: (t: Taken) => number) =>
     group.length ? mean(group.map(t => t.trade.net)) - mean(group.map(base)) : null
   const meanNet = taken.length ? mean(taken.map(t => t.trade.net)) : null
   const baselineNet = taken.length ? mean(taken.map(t => baseline.get(t.symbol)!)) : null
-  const excess = excessOf(taken, t => baseline.get(t.symbol)!)
-
-  // 3. p-value. Each coin is shifted on its own, then the one-position rule is reapplied:
-  // the null keeps how often and how clustered the candidate buys, not when.
-  let p: number | null = null
-  if (excess != null) {
-    let state = rules.seed >>> 0, upper = 0
-    const next = () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 0x100000000 }
-    for (let it = 0; it < rules.permutations; it++) {
-      let sum = 0, base = 0, count = 0
-      for (const symbol of symbols) {
-        const sel = selected.get(symbol)!, n = sel.length, table = tables.get(symbol)!
-        const shift = 1 + Math.floor(next() * (n - 1))
-        const shifted = sel.map((_, k) => sel[(k - shift + n) % n])
-        for (const k of applyOnePosition(shifted, table.nextFree)) {
-          sum += table.trades[k].net; base += baseline.get(symbol)!; count++
-        }
-      }
-      if (count > 0 && (sum - base) / count >= excess) upper++
-    }
-    p = (upper + 1) / (rules.permutations + 1)
-  }
+  const { excess, p } = shiftPValue(selected, tables, baseline, rules.permutations, rules.seed)
 
   const byAsset = symbols.map(symbol => {
     const group = taken.filter(t => t.symbol === symbol)
