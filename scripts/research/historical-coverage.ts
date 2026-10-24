@@ -4,6 +4,14 @@ export type HistoricalCandle = {
   openTime: number; open: number; high: number; low: number; close: number; volume: number
 }
 
+function assertValidCandle(candle: HistoricalCandle, symbol: string) {
+  if (![candle.open, candle.high, candle.low, candle.close, candle.volume].every(Number.isFinite) ||
+    Math.min(candle.open, candle.high, candle.low, candle.close) <= 0 || candle.volume < 0 ||
+    candle.high < Math.max(candle.open, candle.close) || candle.low > Math.min(candle.open, candle.close)) {
+    throw new Error(`${symbol}: invalid historical OHLCV at ${new Date(candle.openTime).toISOString()}`)
+  }
+}
+
 export function assertHistoricalCoverage(candles: HistoricalCandle[], symbol: string, startMs: number, endMs: number) {
   const first = Math.ceil(startMs / BAR_MS) * BAR_MS
   const last = Math.floor(endMs / BAR_MS) * BAR_MS
@@ -16,11 +24,7 @@ export function assertHistoricalCoverage(candles: HistoricalCandle[], symbol: st
     if (candle.openTime !== first + i * BAR_MS) {
       throw new Error(`${symbol}: duplicate or missing historical candle at index ${i}`)
     }
-    if (![candle.open, candle.high, candle.low, candle.close, candle.volume].every(Number.isFinite) ||
-      Math.min(candle.open, candle.high, candle.low, candle.close) <= 0 || candle.volume < 0 ||
-      candle.high < Math.max(candle.open, candle.close) || candle.low > Math.min(candle.open, candle.close)) {
-      throw new Error(`${symbol}: invalid historical OHLCV at ${new Date(candle.openTime).toISOString()}`)
-    }
+    assertValidCandle(candle, symbol)
   }
 }
 
@@ -40,11 +44,7 @@ export function findOutages(candles: HistoricalCandle[], symbol: string, startMs
     if (candle.openTime % BAR_MS !== 0) {
       throw new Error(`${symbol}: historical candle off the 15m grid at ${new Date(candle.openTime).toISOString()}`)
     }
-    if (![candle.open, candle.high, candle.low, candle.close, candle.volume].every(Number.isFinite) ||
-      Math.min(candle.open, candle.high, candle.low, candle.close) <= 0 || candle.volume < 0 ||
-      candle.high < Math.max(candle.open, candle.close) || candle.low > Math.min(candle.open, candle.close)) {
-      throw new Error(`${symbol}: invalid historical OHLCV at ${new Date(candle.openTime).toISOString()}`)
-    }
+    assertValidCandle(candle, symbol)
     if (i === 0) continue
     const previous = candles[i - 1].openTime
     if (candle.openTime <= previous) {
