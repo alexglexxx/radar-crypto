@@ -15,10 +15,9 @@ export type JobHealthRow = {
   failures_24h: number | null
 }
 
-// Ingestion runs every 15 minutes; the news briefing once a day at 13:00 UTC.
+// Ingestion runs every 15 minutes.
 export const JOB_MAX_AGE_MS: Record<string, number> = {
   ingest: 20 * 60 * 1000,
-  'daily-news': 26 * 60 * 60 * 1000,
 }
 
 // A stopped scheduler (stale last run) is reported before a failing job.

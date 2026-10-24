@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type JobName = 'ingest' | 'daily-news'
+// The table also accepts 'daily-news', kept for when the news briefing returns.
+export type JobName = 'ingest'
 
 export type JobRun = {
   job: JobName

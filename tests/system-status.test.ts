@@ -20,7 +20,6 @@ describe('dashboard freshness', () => {
     expect(jobHealth(row('ingest', ago(10 * 60_000), true), now)).toBe('AL DÍA')
     expect(jobHealth(row('ingest', ago(10 * 60_000), false), now)).toBe('FALLANDO')
     expect(jobHealth(row('ingest', ago(21 * 60_000), false), now)).toBe('ATRASADO')
-    expect(jobHealth(row('daily-news', ago(20 * 3_600_000), true), now)).toBe('AL DÍA')
-    expect(jobHealth(row('daily-news', ago(27 * 3_600_000), true), now)).toBe('ATRASADO')
+    expect(jobHealth(row('ingest', ago(21 * 60_000), true), now)).toBe('ATRASADO')
   })
 })

@@ -150,7 +150,7 @@ decisions and lessons. Unrelated workspace configuration was preserved.
 
 ## Job health and production migration history (2026-10-24)
 
-**Job health.** `/api/cron` and `/api/daily-news` record every authorized run in the private table `job_runs` (status, assets, error text). The dashboard reads `job_health_public`, which exposes only the latest run, the latest success and the 24-hour failure count per job, never the error text. A failed health write is logged and does not change the job's response; the dashboard then shows the job as stale. Read the error details with the service role:
+**Job health.** `/api/cron` records every authorized run in the private table `job_runs` (status, assets, error text). The dashboard reads `job_health_public`, which exposes only the latest run, the latest success and the 24-hour failure count per job, never the error text. A failed health write is logged and does not change the job's response; the dashboard then shows the job as stale. Read the error details with the service role:
 
 ```sql
 select job, finished_at, http_status, assets_ok, errors
@@ -159,7 +159,7 @@ from public.job_runs order by finished_at desc limit 20;
 
 Migration `20261024120000_job_runs_health.sql`, rollback in `supabase/rollback/`. The code works with or without the table, so the migration and the deploy can go in either order.
 
-**Daily news has never run successfully.** `news_briefings` and `news_items` have 0 rows in production. Production has no `OPENAI_API_KEY` (and no `NEWS_AI_MODEL`, so the route falls back to `gpt-6-luna`), so `/api/daily-news` fails with HTTP 500 every day at 13:00 UTC. Vercel Hobby keeps runtime logs for one hour, so the failure was never visible. The fix needs a decision: add the key and an explicit model in Vercel (then redeploy), or remove the news cron and section.
+**Daily news removed (2026-10-24).** It never ran successfully: `news_briefings` and `news_items` have 0 rows in production because production has no `OPENAI_API_KEY` (and no `NEWS_AI_MODEL`; the code fell back to the unverified `gpt-6-luna`), so `/api/daily-news` returned HTTP 500 every day at 13:00 UTC. Vercel Hobby keeps runtime logs for one hour, so nobody saw it. By decision of Alex the cron, the API routes and the dashboard section were removed; the empty tables and public news views stay. To restore: recover `app/api/daily-news`, `app/api/news-briefing` and `app/components/NewsIntelligence.tsx` from commit `1f88ecb` (the daily route already records its runs as job `daily-news`), set the key and an explicit model in Vercel, and re-add the cron to `vercel.json`.
 
 **Repo migrations vs. `supabase_migrations.schema_migrations`.** Production versions were assigned when the SQL was applied through the Supabase tools, so they do not match the file names. Do not use `supabase db push`; apply reviewed SQL.
 
