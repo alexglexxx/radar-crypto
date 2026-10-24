@@ -1,0 +1,804 @@
+{
+  "reportName": "radar-crypto-donchian-breakout-1h",
+  "generatedAt": "2026-10-13T02:42:49.397Z",
+  "productionUntouched": true,
+  "notDeployable": true,
+  "methodology": {
+    "interval": "1h",
+    "signals": "Long-only close breakout above prior N-bar high; enter at next candle open. Exit when close falls below prior M-bar low; exit next candle open.",
+    "configurations": [
+      {
+        "name": "donchian_20_10",
+        "entry": 20,
+        "exit": 10
+      },
+      {
+        "name": "donchian_55_20",
+        "entry": 55,
+        "exit": 20
+      }
+    ],
+    "costsBpsRoundTrip": [
+      15,
+      20,
+      25
+    ],
+    "costsInclude": "Combined fee and slippage assumption; sensitivity at 15, 20, and 25 bps per round trip.",
+    "folds": "Four fixed chronological OOS quarters; report trades whose entries and exits complete within the test quarter. Channel values exclude current candle. No parameter selection on OOS.",
+    "risk": "Spot long-only proxy; ignores partial fills, spread variation, latency, exchange outages, taxes, and market impact. No leverage. Research only."
+  },
+  "coverage": [
+    {
+      "symbol": "BTCUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    },
+    {
+      "symbol": "ETHUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    },
+    {
+      "symbol": "SOLUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    },
+    {
+      "symbol": "XRPUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    }
+  ],
+  "strategies": [
+    {
+      "name": "donchian_20_10",
+      "entry": 20,
+      "exit": 10,
+      "folds": [
+        {
+          "fold": 1,
+          "train": "2024-10-01..2025-10-01",
+          "test": "2025-10-01..2026-01-01",
+          "testStats": {
+            "trades": 144,
+            "winRate": 0.24305555555555555,
+            "expectancy": -0.008734015409976629,
+            "profitFactor": 0.45457974914150634,
+            "compoundedReturn": -0.7342067733497257,
+            "maxDrawdown": 0.7713976137847406,
+            "averageBarsHeld": 20.34722222222222
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 37,
+              "winRate": 0.24324324324324326,
+              "expectancy": -0.007561215071890504,
+              "profitFactor": 0.3724085469784653,
+              "compoundedReturn": -0.24962782490474966,
+              "maxDrawdown": 0.2755073214542135,
+              "averageBarsHeld": 18.89189189189189
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 35,
+              "winRate": 0.2857142857142857,
+              "expectancy": -0.007274315266394376,
+              "profitFactor": 0.5400173997328269,
+              "compoundedReturn": -0.23772894549819656,
+              "maxDrawdown": 0.26725287757678867,
+              "averageBarsHeld": 21.057142857142857
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 37,
+              "winRate": 0.1891891891891892,
+              "expectancy": -0.013344091552032127,
+              "profitFactor": 0.310948114134515,
+              "compoundedReturn": -0.4029576974840714,
+              "maxDrawdown": 0.4354268329100952,
+              "averageBarsHeld": 19.54054054054054
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 35,
+              "winRate": 0.2571428571428571,
+              "expectancy": -0.006560023989362692,
+              "profitFactor": 0.6109190288087586,
+              "compoundedReturn": -0.22168991879017086,
+              "maxDrawdown": 0.2725709556356902,
+              "averageBarsHeld": 22.02857142857143
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 144,
+              "winRate": 0.24305555555555555,
+              "expectancy": -0.008734015409976629,
+              "profitFactor": 0.45457974914150634,
+              "compoundedReturn": -0.7342067733497257,
+              "maxDrawdown": 0.7713976137847406,
+              "averageBarsHeld": 20.34722222222222
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 144,
+              "winRate": 0.2361111111111111,
+              "expectancy": -0.009234015409976625,
+              "profitFactor": 0.43670770752934596,
+              "compoundedReturn": -0.7528478248644628,
+              "maxDrawdown": 0.7870203980597829,
+              "averageBarsHeld": 20.34722222222222
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 144,
+              "winRate": 0.2361111111111111,
+              "expectancy": -0.009734015409976622,
+              "profitFactor": 0.4197267453223917,
+              "compoundedReturn": -0.7701899607397713,
+              "maxDrawdown": 0.8015826256531331,
+              "averageBarsHeld": 20.34722222222222
+            }
+          ]
+        },
+        {
+          "fold": 2,
+          "train": "2025-01-01..2026-01-01",
+          "test": "2026-01-01..2026-04-01",
+          "testStats": {
+            "trades": 103,
+            "winRate": 0.33980582524271846,
+            "expectancy": 0.0012870661379199874,
+            "profitFactor": 1.1127028013400424,
+            "compoundedReturn": 0.0704214610216849,
+            "maxDrawdown": 0.4024807576710013,
+            "averageBarsHeld": 25.87378640776699
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 26,
+              "winRate": 0.38461538461538464,
+              "expectancy": -0.0012400947116030362,
+              "profitFactor": 0.877308466614231,
+              "compoundedReturn": -0.03809225026874441,
+              "maxDrawdown": 0.14432084684401006,
+              "averageBarsHeld": 25.653846153846153
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 24,
+              "winRate": 0.3333333333333333,
+              "expectancy": 0.0015367331243045141,
+              "profitFactor": 1.1300020544579408,
+              "compoundedReturn": 0.02582906824330511,
+              "maxDrawdown": 0.10378960011953052,
+              "averageBarsHeld": 26.291666666666668
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 27,
+              "winRate": 0.3333333333333333,
+              "expectancy": 0.0024060403683399596,
+              "profitFactor": 1.2266109122383213,
+              "compoundedReturn": 0.05171456906167715,
+              "maxDrawdown": 0.09163118637236385,
+              "averageBarsHeld": 25.666666666666668
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 26,
+              "winRate": 0.3076923076923077,
+              "expectancy": 0.0024217534530365536,
+              "profitFactor": 1.18352244127534,
+              "compoundedReturn": 0.031450742232166595,
+              "maxDrawdown": 0.18583232873335528,
+              "averageBarsHeld": 25.923076923076923
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "expectancy": 0.0012870661379199874,
+              "profitFactor": 1.1127028013400424,
+              "compoundedReturn": 0.0704214610216849,
+              "maxDrawdown": 0.4024807576710013,
+              "averageBarsHeld": 25.87378640776699
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "expectancy": 0.0007870661379199868,
+              "profitFactor": 1.0669837912765199,
+              "compoundedReturn": 0.01668080983832243,
+              "maxDrawdown": 0.41212103495424174,
+              "averageBarsHeld": 25.87378640776699
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "expectancy": 0.00028706613791998646,
+              "profitFactor": 1.0237633686059244,
+              "compoundedReturn": -0.034386698894116496,
+              "maxDrawdown": 0.4216105629316908,
+              "averageBarsHeld": 25.87378640776699
+            }
+          ]
+        },
+        {
+          "fold": 3,
+          "train": "2025-04-01..2026-04-01",
+          "test": "2026-04-01..2026-07-01",
+          "testStats": {
+            "trades": 117,
+            "winRate": 0.358974358974359,
+            "expectancy": -0.0023205528877307488,
+            "profitFactor": 0.7425840816543158,
+            "compoundedReturn": -0.2546064406114895,
+            "maxDrawdown": 0.2841686511450711,
+            "averageBarsHeld": 26.495726495726494
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 28,
+              "winRate": 0.32142857142857145,
+              "expectancy": -0.0021987801564130878,
+              "profitFactor": 0.6718671372757811,
+              "compoundedReturn": -0.06224649001035287,
+              "maxDrawdown": 0.06224649001035287,
+              "averageBarsHeld": 27.892857142857142
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 30,
+              "winRate": 0.3,
+              "expectancy": -0.003557769327249508,
+              "profitFactor": 0.6279837475260287,
+              "compoundedReturn": -0.10609070057535652,
+              "maxDrawdown": 0.12880587276989647,
+              "averageBarsHeld": 23.333333333333332
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 29,
+              "winRate": 0.4482758620689655,
+              "expectancy": 0.0012065857320910903,
+              "profitFactor": 1.1446602179321208,
+              "compoundedReturn": 0.028411495422919097,
+              "maxDrawdown": 0.09978428914991055,
+              "averageBarsHeld": 29.896551724137932
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 30,
+              "winRate": 0.36666666666666664,
+              "expectancy": -0.00460655832993625,
+              "profitFactor": 0.5915187788722818,
+              "compoundedReturn": -0.13535753779790616,
+              "maxDrawdown": 0.14062521281169044,
+              "averageBarsHeld": 25.066666666666666
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 117,
+              "winRate": 0.358974358974359,
+              "expectancy": -0.0023205528877307488,
+              "profitFactor": 0.7425840816543158,
+              "compoundedReturn": -0.2546064406114895,
+              "maxDrawdown": 0.2841686511450711,
+              "averageBarsHeld": 26.495726495726494
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 117,
+              "winRate": 0.3504273504273504,
+              "expectancy": -0.002820552887730749,
+              "profitFactor": 0.6979344228980306,
+              "compoundedReturn": -0.2970824479155266,
+              "maxDrawdown": 0.31125382959539905,
+              "averageBarsHeld": 26.495726495726494
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 117,
+              "winRate": 0.3504273504273504,
+              "expectancy": -0.003320552887730749,
+              "profitFactor": 0.6563406349405694,
+              "compoundedReturn": -0.33715749397239814,
+              "maxDrawdown": 0.3407074744328755,
+              "averageBarsHeld": 26.495726495726494
+            }
+          ]
+        },
+        {
+          "fold": 4,
+          "train": "2025-07-01..2026-07-01",
+          "test": "2026-07-01..2026-10-01",
+          "testStats": {
+            "trades": 113,
+            "winRate": 0.3893805309734513,
+            "expectancy": 0.013119516665877556,
+            "profitFactor": 2.6564145865817435,
+            "compoundedReturn": 2.6654829138610774,
+            "maxDrawdown": 0.1728830569229535,
+            "averageBarsHeld": 32.575221238938056
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 31,
+              "winRate": 0.45161290322580644,
+              "expectancy": 0.007803143306475775,
+              "profitFactor": 2.4552173000989472,
+              "compoundedReturn": 0.2494939756508272,
+              "maxDrawdown": 0.054814537268353385,
+              "averageBarsHeld": 32.806451612903224
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 26,
+              "winRate": 0.38461538461538464,
+              "expectancy": 0.012999364915498818,
+              "profitFactor": 2.7968870964389843,
+              "compoundedReturn": 0.35686661413365117,
+              "maxDrawdown": 0.05611683242720399,
+              "averageBarsHeld": 34.80769230769231
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 28,
+              "winRate": 0.39285714285714285,
+              "expectancy": 0.013066537684482543,
+              "profitFactor": 2.2841687293209643,
+              "compoundedReturn": 0.3869676015418473,
+              "maxDrawdown": 0.0903904152186854,
+              "averageBarsHeld": 31.892857142857142
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 28,
+              "winRate": 0.32142857142857145,
+              "expectancy": 0.01917004992053341,
+              "profitFactor": 3.0984914473269614,
+              "compoundedReturn": 0.5588113515679061,
+              "maxDrawdown": 0.07867713721274347,
+              "averageBarsHeld": 30.928571428571427
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 113,
+              "winRate": 0.3893805309734513,
+              "expectancy": 0.013119516665877556,
+              "profitFactor": 2.6564145865817435,
+              "compoundedReturn": 2.6654829138610774,
+              "maxDrawdown": 0.1728830569229535,
+              "averageBarsHeld": 32.575221238938056
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 113,
+              "winRate": 0.3893805309734513,
+              "expectancy": 0.012619516665877573,
+              "profitFactor": 2.5341496639074466,
+              "compoundedReturn": 2.466053923708631,
+              "maxDrawdown": 0.19202424904721208,
+              "averageBarsHeld": 32.575221238938056
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 113,
+              "winRate": 0.3893805309734513,
+              "expectancy": 0.012119516665877577,
+              "profitFactor": 2.420635990159308,
+              "compoundedReturn": 2.27738429128311,
+              "maxDrawdown": 0.21403248076825043,
+              "averageBarsHeld": 32.575221238938056
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "positiveOosFolds": 2,
+        "folds": 4,
+        "oosExpectancies": [
+          -0.008734015409976629,
+          0.0012870661379199874,
+          -0.0023205528877307488,
+          0.013119516665877556
+        ],
+        "totalTrades": 477,
+        "note": "Fixed, predeclared parameters; no threshold optimization. Per-symbol stats are reported to expose concentration risk."
+      }
+    },
+    {
+      "name": "donchian_55_20",
+      "entry": 55,
+      "exit": 20,
+      "folds": [
+        {
+          "fold": 1,
+          "train": "2024-10-01..2025-10-01",
+          "test": "2025-10-01..2026-01-01",
+          "testStats": {
+            "trades": 52,
+            "winRate": 0.3076923076923077,
+            "expectancy": -0.012313497088103625,
+            "profitFactor": 0.4097314025937841,
+            "compoundedReturn": -0.49085463511293514,
+            "maxDrawdown": 0.5590747227186877,
+            "averageBarsHeld": 43.65384615384615
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 13,
+              "winRate": 0.3076923076923077,
+              "expectancy": -0.005173831975368483,
+              "profitFactor": 0.571131710673313,
+              "compoundedReturn": -0.06820598629569541,
+              "maxDrawdown": 0.11258786094104636,
+              "averageBarsHeld": 48
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 11,
+              "winRate": 0.5454545454545454,
+              "expectancy": -0.0010220681355112761,
+              "profitFactor": 0.9303557517265628,
+              "compoundedReturn": -0.016942675287717535,
+              "maxDrawdown": 0.09030465282356832,
+              "averageBarsHeld": 49.72727272727273
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 16,
+              "winRate": 0.0625,
+              "expectancy": -0.030148656992073017,
+              "profitFactor": 0.0866830780081996,
+              "compoundedReturn": -0.3930111678730468,
+              "maxDrawdown": 0.4195841348723588,
+              "averageBarsHeld": 38.8125
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 12,
+              "winRate": 0.4166666666666667,
+              "expectancy": -0.006618397628150484,
+              "profitFactor": 0.6667757651447509,
+              "compoundedReturn": -0.08428077018032121,
+              "maxDrawdown": 0.14323169785128312,
+              "averageBarsHeld": 39.833333333333336
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 52,
+              "winRate": 0.3076923076923077,
+              "expectancy": -0.012313497088103625,
+              "profitFactor": 0.4097314025937841,
+              "compoundedReturn": -0.49085463511293514,
+              "maxDrawdown": 0.5590747227186877,
+              "averageBarsHeld": 43.65384615384615
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 52,
+              "winRate": 0.3076923076923077,
+              "expectancy": -0.012813497088103623,
+              "profitFactor": 0.3957890071483281,
+              "compoundedReturn": -0.5041013932364895,
+              "maxDrawdown": 0.56971694242829,
+              "averageBarsHeld": 43.65384615384615
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 52,
+              "winRate": 0.3076923076923077,
+              "expectancy": -0.013313497088103617,
+              "profitFactor": 0.3822944548220341,
+              "compoundedReturn": -0.5170099680903132,
+              "maxDrawdown": 0.5801075304844646,
+              "averageBarsHeld": 43.65384615384615
+            }
+          ]
+        },
+        {
+          "fold": 2,
+          "train": "2025-01-01..2026-01-01",
+          "test": "2026-01-01..2026-04-01",
+          "testStats": {
+            "trades": 44,
+            "winRate": 0.3409090909090909,
+            "expectancy": -0.000617495874508537,
+            "profitFactor": 0.9551867294260786,
+            "compoundedReturn": -0.054314863461123575,
+            "maxDrawdown": 0.3081688881095687,
+            "averageBarsHeld": 47.68181818181818
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 12,
+              "winRate": 0.3333333333333333,
+              "expectancy": -0.000979116101423519,
+              "profitFactor": 0.8901760011787402,
+              "compoundedReturn": -0.013959366311533161,
+              "maxDrawdown": 0.06953274547777542,
+              "averageBarsHeld": 48.166666666666664
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 10,
+              "winRate": 0.5,
+              "expectancy": 0.007264908344056164,
+              "profitFactor": 1.60039456462555,
+              "compoundedReturn": 0.06945926883741294,
+              "maxDrawdown": 0.08732034284893395,
+              "averageBarsHeld": 54.3
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 12,
+              "winRate": 0.25,
+              "expectancy": -0.00835144779054007,
+              "profitFactor": 0.4381958272868555,
+              "compoundedReturn": -0.09889388186221715,
+              "maxDrawdown": 0.12838311437806388,
+              "averageBarsHeld": 43.5
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 10,
+              "winRate": 0.3,
+              "expectancy": 0.0012147864784625817,
+              "profitFactor": 1.060764052608091,
+              "compoundedReturn": -0.004797257985060477,
+              "maxDrawdown": 0.1480453356545922,
+              "averageBarsHeld": 45.5
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 44,
+              "winRate": 0.3409090909090909,
+              "expectancy": -0.000617495874508537,
+              "profitFactor": 0.9551867294260786,
+              "compoundedReturn": -0.054314863461123575,
+              "maxDrawdown": 0.3081688881095687,
+              "averageBarsHeld": 47.68181818181818
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 44,
+              "winRate": 0.3409090909090909,
+              "expectancy": -0.0011174958745085375,
+              "profitFactor": 0.920794708907751,
+              "compoundedReturn": -0.07493640504144106,
+              "maxDrawdown": 0.32132245171083673,
+              "averageBarsHeld": 47.68181818181818
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 44,
+              "winRate": 0.3409090909090909,
+              "expectancy": -0.001617495874508538,
+              "profitFactor": 0.8879726316790952,
+              "compoundedReturn": -0.09511828824363111,
+              "maxDrawdown": 0.3342323937605183,
+              "averageBarsHeld": 47.68181818181818
+            }
+          ]
+        },
+        {
+          "fold": 3,
+          "train": "2025-04-01..2026-04-01",
+          "test": "2026-04-01..2026-07-01",
+          "testStats": {
+            "trades": 62,
+            "winRate": 0.22580645161290322,
+            "expectancy": -0.013100047993103112,
+            "profitFactor": 0.24214951462501505,
+            "compoundedReturn": -0.565699781740608,
+            "maxDrawdown": 0.565699781740608,
+            "averageBarsHeld": 38.064516129032256
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 17,
+              "winRate": 0.17647058823529413,
+              "expectancy": -0.011351086467751955,
+              "profitFactor": 0.11528806854374582,
+              "compoundedReturn": -0.1778063269696979,
+              "maxDrawdown": 0.1778063269696979,
+              "averageBarsHeld": 42.294117647058826
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 15,
+              "winRate": 0.2,
+              "expectancy": -0.01689100891568485,
+              "profitFactor": 0.08183841225125615,
+              "compoundedReturn": -0.22682918295195842,
+              "maxDrawdown": 0.22682918295195842,
+              "averageBarsHeld": 36.266666666666666
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 16,
+              "winRate": 0.25,
+              "expectancy": -0.012223036037564486,
+              "profitFactor": 0.4122255958368203,
+              "compoundedReturn": -0.18631940154133475,
+              "maxDrawdown": 0.22739657345651787,
+              "averageBarsHeld": 40.8125
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 14,
+              "winRate": 0.2857142857142857,
+              "expectancy": -0.01216434252030756,
+              "profitFactor": 0.30469387503531464,
+              "compoundedReturn": -0.16037279275785288,
+              "maxDrawdown": 0.16037279275785288,
+              "averageBarsHeld": 31.714285714285715
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 62,
+              "winRate": 0.22580645161290322,
+              "expectancy": -0.013100047993103112,
+              "profitFactor": 0.24214951462501505,
+              "compoundedReturn": -0.565699781740608,
+              "maxDrawdown": 0.565699781740608,
+              "averageBarsHeld": 38.064516129032256
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 62,
+              "winRate": 0.20967741935483872,
+              "expectancy": -0.013600047993103123,
+              "profitFactor": 0.23058906411159585,
+              "compoundedReturn": -0.5791400432818905,
+              "maxDrawdown": 0.5791400432818905,
+              "averageBarsHeld": 38.064516129032256
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 62,
+              "winRate": 0.20967741935483872,
+              "expectancy": -0.014100047993103099,
+              "profitFactor": 0.21974529927758715,
+              "compoundedReturn": -0.5921708768945839,
+              "maxDrawdown": 0.5921708768945839,
+              "averageBarsHeld": 38.064516129032256
+            }
+          ]
+        },
+        {
+          "fold": 4,
+          "train": "2025-07-01..2026-07-01",
+          "test": "2026-07-01..2026-10-01",
+          "testStats": {
+            "trades": 58,
+            "winRate": 0.39655172413793105,
+            "expectancy": 0.016730322382656846,
+            "profitFactor": 2.3277938880108553,
+            "compoundedReturn": 1.188937274161101,
+            "maxDrawdown": 0.28838048145243184,
+            "averageBarsHeld": 51.13793103448276
+          },
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 16,
+              "winRate": 0.375,
+              "expectancy": 0.008358412440227544,
+              "profitFactor": 1.8125716116196215,
+              "compoundedReturn": 0.11986062787391982,
+              "maxDrawdown": 0.09073706026569156,
+              "averageBarsHeld": 50.1875
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 16,
+              "winRate": 0.4375,
+              "expectancy": 0.007179100765965299,
+              "profitFactor": 1.4941249584221266,
+              "compoundedReturn": 0.08571743102263962,
+              "maxDrawdown": 0.1398379120464033,
+              "averageBarsHeld": 47.5
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 16,
+              "winRate": 0.3125,
+              "expectancy": 0.016652813302083562,
+              "profitFactor": 2.120453664728853,
+              "compoundedReturn": 0.23484893194080714,
+              "maxDrawdown": 0.10019166715979962,
+              "averageBarsHeld": 54.5625
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 10,
+              "winRate": 0.5,
+              "expectancy": 0.045531347406167454,
+              "profitFactor": 5.744845405522816,
+              "compoundedReturn": 0.45793680559597383,
+              "maxDrawdown": 0.05638684160547103,
+              "averageBarsHeld": 53
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 58,
+              "winRate": 0.39655172413793105,
+              "expectancy": 0.016730322382656846,
+              "profitFactor": 2.3277938880108553,
+              "compoundedReturn": 1.188937274161101,
+              "maxDrawdown": 0.28838048145243184,
+              "averageBarsHeld": 51.13793103448276
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 58,
+              "winRate": 0.39655172413793105,
+              "expectancy": 0.01623032238265684,
+              "profitFactor": 2.257987621834222,
+              "compoundedReturn": 1.1270211317052916,
+              "maxDrawdown": 0.293467833937631,
+              "averageBarsHeld": 51.13793103448276
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 58,
+              "winRate": 0.3793103448275862,
+              "expectancy": 0.015730322382656856,
+              "profitFactor": 2.190770365994536,
+              "compoundedReturn": 1.066826857682869,
+              "maxDrawdown": 0.29852139805044386,
+              "averageBarsHeld": 51.13793103448276
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "positiveOosFolds": 1,
+        "folds": 4,
+        "oosExpectancies": [
+          -0.012313497088103625,
+          -0.000617495874508537,
+          -0.013100047993103112,
+          0.016730322382656846
+        ],
+        "totalTrades": 216,
+        "note": "Fixed, predeclared parameters; no threshold optimization. Per-symbol stats are reported to expose concentration risk."
+      }
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "report_name": "radar-crypto-discovery-1h",
+  "generated_at": "2026-10-05T10:43:30.875Z",
+  "data": {
+    "start": "2024-10-05T10:42:03.894Z",
+    "end": "2026-10-05T10:42:03.894Z",
+    "months": 24,
+    "interval": "1h",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "total_observations": 7428
+  },
+  "methodology": {
+    "purpose": "Fast discovery screen for monotonic predictive structure, not a production backtest.",
+    "production_untouched": true,
+    "fee_bps": 10,
+    "slippage_bps": 5,
+    "score_note": "Candidate score reuses production indicator families with 1h-normalized horizons; it is research-only."
+  },
+  "by_score": [
+    {
+      "bucket": "0-39",
+      "signals": 1963,
+      "winRate4h": 0.4905756495160469,
+      "avg1h": 0.0004565977642282567,
+      "avg4hNet": -0.00004683510619736571,
+      "avg12h": 0.0018793049823211242,
+      "avg24h": 0.004488929714271657
+    },
+    {
+      "bucket": "40-49",
+      "signals": 955,
+      "winRate4h": 0.45759162303664924,
+      "avg1h": -0.0003492631691598526,
+      "avg4hNet": -0.0019664952378149296,
+      "avg12h": 0.0003874038199991953,
+      "avg24h": 0.0027281417839336536
+    },
+    {
+      "bucket": "50-59",
+      "signals": 1197,
+      "winRate4h": 0.441938178780284,
+      "avg1h": 0.00037127334328307507,
+      "avg4hNet": -0.0010402987349102564,
+      "avg12h": 0.0019413241209647555,
+      "avg24h": 0.004638925188673919
+    },
+    {
+      "bucket": "60-69",
+      "signals": 1238,
+      "winRate4h": 0.438610662358643,
+      "avg1h": 0.0003434175070689359,
+      "avg4hNet": -0.00010479031155921441,
+      "avg12h": 0.004329923829358837,
+      "avg24h": 0.008848050459904964
+    },
+    {
+      "bucket": "70-79",
+      "signals": 1006,
+      "winRate4h": 0.44731610337972166,
+      "avg1h": 0.00030483211313065843,
+      "avg4hNet": 0.00004163275505666936,
+      "avg12h": 0.005940116092765257,
+      "avg24h": 0.011377232168156948
+    },
+    {
+      "bucket": "80-100",
+      "signals": 1069,
+      "winRate4h": 0.44340505144995324,
+      "avg1h": 0.0006460201331629435,
+      "avg4hNet": 0.0016710425838448253,
+      "avg12h": 0.010467290794918066,
+      "avg24h": 0.019107539588664152
+    }
+  ],
+  "comparison": {
+    "high_ge70": {
+      "signals": 2075,
+      "avg4hNet": 0.0008810732885383747,
+      "winRate4h": 0.4453012048192771
+    },
+    "low_lt50": {
+      "signals": 2918,
+      "avg4hNet": -0.0006750994741530795,
+      "winRate4h": 0.47978067169294036
+    }
+  }
+}

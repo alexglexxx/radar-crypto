@@ -1,0 +1,1189 @@
+{
+  "report_name": "radar-crypto-backtest-baseline",
+  "model_version": "v1.1-live",
+  "generated_at": "2026-10-03T15:05:40.135Z",
+  "commit_sha": "93a16b029e92c6ba90c07c2b00612965c51cbca3",
+  "data": {
+    "start": "2023-10-03T15:04:24.755Z",
+    "end": "2026-10-03T15:04:24.755Z",
+    "total_candles": 174860,
+    "symbols_processed": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "interval": "15m",
+    "timeframes": [
+      "15m",
+      "1h",
+      "4h"
+    ],
+    "target_months": 36,
+    "actual_months_available": 37
+  },
+  "methodology": {
+    "no_lookahead": true,
+    "signal_definition": "Signals are generated when status === \"SETUP LONG\" (score >= 75). Features are computed using only historical closed candles up to and including the signal bar.",
+    "entry_rule": "Entry price is the close of the 15m candle that generates the SETUP LONG signal.",
+    "outcome_measurement": "Outcome is measured as the simple return from entry price to the close of the candle at the target horizon (1, 4, or 16 bars forward).",
+    "fee_assumption": "Scenario B applies 10 bps as a realistic market-maker execution fee, not derived from specific exchange rebate tiers.",
+    "slippage_assumption": "Scenario C adds 5 bps as conservative mid-to-market slippage, representing partial fill at slightly worse prices.",
+    "model_version_used": "v1.1-live",
+    "production_functions_imported": [
+      "lib/features.ts: calculateFeatures() (parity spot-checks)",
+      "scripts/backtest-baseline.ts: IncrementalFeatureEngine mirrors calculateFeatures() formulas",
+      "lib/scoring.ts: calculateRadarScore()"
+    ],
+    "timestamp_precision": "Signal timestamp is derived from candle openTime plus 15m interval. Outcome targets are subsequent closed candles.",
+    "model_issues_found": [
+      "calculateFeatures() hardcodes return_5m to null; the 5m feature is not available despite the FeatureSet type definition.",
+      "Production route defines regime via status value (\"SETUP LONG\", \"VIGILAR\", \"NEUTRAL\", \"EVITAR\") rather than a separate market-regime classifier."
+    ],
+    "methodology_warnings": [
+      "Entry price uses close of the signal bar; this is realistic but could experience microfill slippage on market orders.",
+      "Outcome measurement assumes the first available candle close at the target horizon; gaps or data anomalies could affect results.",
+      "Incremental feature engine is benchmark-only and validated against production calculateFeatures() at three checkpoints per symbol."
+    ]
+  },
+  "costs": {
+    "scenario_gross": {
+      "description": "Gross returns without fees or slippage.",
+      "fee_bps": 0,
+      "slippage_bps": 0
+    },
+    "scenario_fees": {
+      "description": "Realistic execution fees only (10 bps).",
+      "fee_bps": 10,
+      "slippage_bps": 0
+    },
+    "scenario_fees_slippage": {
+      "description": "Fees (10 bps) plus conservative slippage (5 bps).",
+      "fee_bps": 10,
+      "slippage_bps": 5
+    }
+  },
+  "summary": {
+    "gross": {
+      "signals": 23108,
+      "wins": 10599,
+      "losses": 12333,
+      "timeouts": 176,
+      "win_rate": 0.45867232127401764,
+      "loss_rate": 0.5337112688246495,
+      "timeout_rate": 0.007616409901332871,
+      "average_return": 0.000030909381819489754,
+      "median_return": -0.0003123052968617552,
+      "std_dev_return": 0.00549020244537231,
+      "expectancy": 0.000030909381819495046,
+      "profit_factor": 1.017756069864971,
+      "cumulative_return": 0.4442814702031206,
+      "max_drawdown": 0.723712317832176,
+      "sharpe": 0.8558213960422695,
+      "mae": 0.05968157116979698,
+      "mfe": 0.12568008705114259
+    },
+    "fees": {
+      "signals": 23108,
+      "wins": 8135,
+      "losses": 14973,
+      "timeouts": 0,
+      "win_rate": 0.35204258265535743,
+      "loss_rate": 0.6479574173446425,
+      "timeout_rate": 0,
+      "average_return": -0.0009690906181805076,
+      "median_return": -0.0013123052968617552,
+      "std_dev_return": 0.00549020244537231,
+      "expectancy": -0.0009690906181804902,
+      "profit_factor": 0.5848283318626696,
+      "cumulative_return": -0.9999999998684886,
+      "max_drawdown": 0.9999999998693561,
+      "sharpe": -26.832257292824725,
+      "mae": 0.06068157116979698,
+      "mfe": 0.12468008705114259
+    },
+    "fees_slippage": {
+      "signals": 23108,
+      "wins": 6980,
+      "losses": 16128,
+      "timeouts": 0,
+      "win_rate": 0.3020598926778605,
+      "loss_rate": 0.6979401073221395,
+      "timeout_rate": 0,
+      "average_return": -0.0014690906181805085,
+      "median_return": -0.0018123052968617552,
+      "std_dev_return": 0.00549020244537231,
+      "expectancy": -0.0014690906181805067,
+      "profit_factor": 0.44988505380213994,
+      "cumulative_return": -0.9999999999999988,
+      "max_drawdown": 0.9999999999999988,
+      "sharpe": -40.67629663725828,
+      "mae": 0.06118157116979698,
+      "mfe": 0.12418008705114258
+    }
+  },
+  "by_symbol": [
+    {
+      "symbol": "BTCUSDT",
+      "signals": 4921,
+      "scenarios": {
+        "gross": {
+          "signals": 4921,
+          "wins": 2286,
+          "losses": 2632,
+          "timeouts": 3,
+          "win_rate": 0.4645397276976224,
+          "loss_rate": 0.534850640113798,
+          "timeout_rate": 0.000609632188579557,
+          "average_return": 0.0000394783220779667,
+          "median_return": -0.00021989486305190698,
+          "std_dev_return": 0.0036433643835198505,
+          "expectancy": 0.00003947832207796447,
+          "profit_factor": 1.0334889966905514,
+          "cumulative_return": 0.1754882899975556,
+          "max_drawdown": 0.19427006509136108,
+          "sharpe": 0.7601210505118512,
+          "mae": 0.04237811978540172,
+          "mfe": 0.055415159257874914
+        },
+        "fees": {
+          "signals": 4921,
+          "wins": 1578,
+          "losses": 3343,
+          "timeouts": 0,
+          "win_rate": 0.320666531192847,
+          "loss_rate": 0.6793334688071531,
+          "timeout_rate": 0,
+          "average_return": -0.0009605216779220339,
+          "median_return": -0.001219894863051907,
+          "std_dev_return": 0.0036433643835198505,
+          "expectancy": -0.0009605216779220362,
+          "profit_factor": 0.46196969727090165,
+          "cumulative_return": -0.9914485058247978,
+          "max_drawdown": 0.9914613583305446,
+          "sharpe": -18.49401667628085,
+          "mae": 0.04337811978540172,
+          "mfe": 0.054415159257874914
+        },
+        "fees_slippage": {
+          "signals": 4921,
+          "wins": 1269,
+          "losses": 3652,
+          "timeouts": 0,
+          "win_rate": 0.2578744157691526,
+          "loss_rate": 0.7421255842308474,
+          "timeout_rate": 0,
+          "average_return": -0.0014605216779220356,
+          "median_return": -0.001719894863051907,
+          "std_dev_return": 0.0036433643835198505,
+          "expectancy": -0.001460521677922032,
+          "profit_factor": 0.31774387050339997,
+          "cumulative_return": -0.9992719669241424,
+          "max_drawdown": 0.9992720256856223,
+          "sharpe": -28.121085539677225,
+          "mae": 0.04387811978540172,
+          "mfe": 0.05391515925787491
+        }
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "signals": 5071,
+      "scenarios": {
+        "gross": {
+          "signals": 5071,
+          "wins": 2315,
+          "losses": 2754,
+          "timeouts": 2,
+          "win_rate": 0.45651745217905737,
+          "loss_rate": 0.543088148294222,
+          "timeout_rate": 0.00039439952672056796,
+          "average_return": 0.00005499450192634393,
+          "median_return": -0.0003089929302417561,
+          "std_dev_return": 0.003836472517240695,
+          "expectancy": 0.0000549945019263419,
+          "profit_factor": 1.0415727329452307,
+          "cumulative_return": 0.2733244313018439,
+          "max_drawdown": 0.19974875935361283,
+          "sharpe": 1.0207843119097473,
+          "mae": 0.02166156041981964,
+          "mfe": 0.02492820676451819
+        },
+        "fees": {
+          "signals": 5071,
+          "wins": 1680,
+          "losses": 3391,
+          "timeouts": 0,
+          "win_rate": 0.33129560244527706,
+          "loss_rate": 0.6687043975547229,
+          "timeout_rate": 0,
+          "average_return": -0.0009450054980736563,
+          "median_return": -0.0013089929302417562,
+          "std_dev_return": 0.0038364725172406948,
+          "expectancy": -0.0009450054980736568,
+          "profit_factor": 0.5104565703703453,
+          "cumulative_return": -0.9920270555897994,
+          "max_drawdown": 0.9920478379967075,
+          "sharpe": -17.540785957004044,
+          "mae": 0.02266156041981964,
+          "mfe": 0.02392820676451819
+        },
+        "fees_slippage": {
+          "signals": 5071,
+          "wins": 1404,
+          "losses": 3667,
+          "timeouts": 0,
+          "win_rate": 0.2768684677578387,
+          "loss_rate": 0.7231315322421613,
+          "timeout_rate": 0,
+          "average_return": -0.001445005498073654,
+          "median_return": -0.0018089929302417562,
+          "std_dev_return": 0.0038364725172406948,
+          "expectancy": -0.0014450054980736523,
+          "profit_factor": 0.36563556318178403,
+          "cumulative_return": -0.9993703033554536,
+          "max_drawdown": 0.9993710110255695,
+          "sharpe": -26.821571091460893,
+          "mae": 0.023161560419819642,
+          "mfe": 0.02342820676451819
+        }
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "signals": 7673,
+      "scenarios": {
+        "gross": {
+          "signals": 7673,
+          "wins": 3572,
+          "losses": 4025,
+          "timeouts": 76,
+          "win_rate": 0.46552847647595463,
+          "loss_rate": 0.5245666623224293,
+          "timeout_rate": 0.009904861201616056,
+          "average_return": 0.000014807484681108017,
+          "median_return": -0.00034723944640107734,
+          "std_dev_return": 0.006114833282325654,
+          "expectancy": 0.000014807484681099003,
+          "profit_factor": 1.0069688253894038,
+          "cumulative_return": -0.029026436614136286,
+          "max_drawdown": 0.5416735729176517,
+          "sharpe": 0.21211885315706144,
+          "mae": 0.05968157116979698,
+          "mfe": 0.05840455840455843
+        },
+        "fees": {
+          "signals": 7673,
+          "wins": 2958,
+          "losses": 4715,
+          "timeouts": 0,
+          "win_rate": 0.38550762413658285,
+          "loss_rate": 0.6144923758634172,
+          "timeout_rate": 0,
+          "average_return": -0.0009851925153188967,
+          "median_return": -0.0013472394464010774,
+          "std_dev_return": 0.006114833282325652,
+          "expectancy": -0.000985192515318894,
+          "profit_factor": 0.6347873732057526,
+          "cumulative_return": -0.9995500920682256,
+          "max_drawdown": 0.9995525501255057,
+          "sharpe": -14.112991570741757,
+          "mae": 0.06068157116979698,
+          "mfe": 0.05740455840455843
+        },
+        "fees_slippage": {
+          "signals": 7673,
+          "wins": 2639,
+          "losses": 5034,
+          "timeouts": 0,
+          "win_rate": 0.3439332725140102,
+          "loss_rate": 0.6560667274859898,
+          "timeout_rate": 0,
+          "average_return": -0.0014851925153188965,
+          "median_return": -0.0018472394464010774,
+          "std_dev_return": 0.006114833282325651,
+          "expectancy": -0.0014851925153188973,
+          "profit_factor": 0.5073934545648926,
+          "cumulative_return": -0.9999903432729701,
+          "max_drawdown": 0.9999903703892392,
+          "sharpe": -21.275546782691134,
+          "mae": 0.06118157116979698,
+          "mfe": 0.05690455840455843
+        }
+      }
+    },
+    {
+      "symbol": "XRPUSDT",
+      "signals": 5443,
+      "scenarios": {
+        "gross": {
+          "signals": 5443,
+          "wins": 2426,
+          "losses": 2922,
+          "timeouts": 95,
+          "win_rate": 0.44571008634943965,
+          "loss_rate": 0.5368363035090943,
+          "timeout_rate": 0.017453610141466104,
+          "average_return": 0.00002342205087496998,
+          "median_return": -0.0003654080389768173,
+          "std_dev_return": 0.007038660481657313,
+          "expectancy": 0.000023422050874963036,
+          "profit_factor": 1.0111703516705857,
+          "cumulative_return": -0.006227316744046862,
+          "max_drawdown": 0.46569380383047504,
+          "sharpe": 0.24550145486873376,
+          "mae": 0.05417852955953775,
+          "mfe": 0.12568008705114259
+        },
+        "fees": {
+          "signals": 5443,
+          "wins": 1919,
+          "losses": 3524,
+          "timeouts": 0,
+          "win_rate": 0.3525629248576153,
+          "loss_rate": 0.6474370751423847,
+          "timeout_rate": 0,
+          "average_return": -0.0009765779491250326,
+          "median_return": -0.0013654080389768172,
+          "std_dev_return": 0.007038660481657313,
+          "expectancy": -0.0009765779491250322,
+          "profit_factor": 0.637555610550709,
+          "cumulative_return": -0.9957127482102787,
+          "max_drawdown": 0.9957410275776389,
+          "sharpe": -10.23613639056392,
+          "mae": 0.05517852955953775,
+          "mfe": 0.12468008705114259
+        },
+        "fees_slippage": {
+          "signals": 5443,
+          "wins": 1668,
+          "losses": 3775,
+          "timeouts": 0,
+          "win_rate": 0.3064486496417417,
+          "loss_rate": 0.6935513503582583,
+          "timeout_rate": 0,
+          "average_return": -0.0014765779491250305,
+          "median_return": -0.0018654080389768173,
+          "std_dev_return": 0.007038660481657313,
+          "expectancy": -0.001476577949125032,
+          "profit_factor": 0.5126368163418941,
+          "cumulative_return": -0.9997189801868238,
+          "max_drawdown": 0.9997194350747006,
+          "sharpe": -15.476955313280213,
+          "mae": 0.055678529559537754,
+          "mfe": 0.12418008705114258
+        }
+      }
+    }
+  ],
+  "by_horizon": [
+    {
+      "symbol": "BTCUSDT",
+      "horizon": "15m",
+      "signals": 4921,
+      "summary": {
+        "signals": 4921,
+        "wins": 2286,
+        "losses": 2632,
+        "timeouts": 3,
+        "win_rate": 0.4645397276976224,
+        "loss_rate": 0.534850640113798,
+        "timeout_rate": 0.000609632188579557,
+        "average_return": 0.0000394783220779667,
+        "median_return": -0.00021989486305190698,
+        "std_dev_return": 0.0036433643835198505,
+        "expectancy": 0.00003947832207796447,
+        "profit_factor": 1.0334889966905514,
+        "cumulative_return": 0.1754882899975556,
+        "max_drawdown": 0.19427006509136108,
+        "sharpe": 0.7601210505118512,
+        "mae": 0.04237811978540172,
+        "mfe": 0.055415159257874914
+      }
+    },
+    {
+      "symbol": "BTCUSDT",
+      "horizon": "1h",
+      "signals": 4921,
+      "summary": {
+        "signals": 4921,
+        "wins": 2187,
+        "losses": 2734,
+        "timeouts": 0,
+        "win_rate": 0.4444218654744971,
+        "loss_rate": 0.555578134525503,
+        "timeout_rate": 0,
+        "average_return": -0.000052553838150090744,
+        "median_return": -0.0005433561611867829,
+        "std_dev_return": 0.0066938790734262345,
+        "expectancy": -0.000052553838150089585,
+        "profit_factor": 0.9763719367842231,
+        "cumulative_return": -0.30844118590456426,
+        "max_drawdown": 0.6118005194339241,
+        "sharpe": -0.5507484192181376,
+        "mae": 0.048882307324374215,
+        "mfe": 0.053301296237748916
+      }
+    },
+    {
+      "symbol": "BTCUSDT",
+      "horizon": "4h",
+      "signals": 4921,
+      "summary": {
+        "signals": 4921,
+        "wins": 2353,
+        "losses": 2568,
+        "timeouts": 0,
+        "win_rate": 0.4781548465758992,
+        "loss_rate": 0.5218451534241008,
+        "timeout_rate": 0,
+        "average_return": 0.0005309214026640921,
+        "median_return": -0.0004495216570100983,
+        "std_dev_return": 0.012329587952360853,
+        "expectancy": 0.0005309214026640871,
+        "profit_factor": 1.134258573280141,
+        "cumulative_return": 8.389613859162766,
+        "max_drawdown": 0.7088222077551921,
+        "sharpe": 3.020705265779394,
+        "mae": 0.07195910133240356,
+        "mfe": 0.08099597578948442
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "horizon": "15m",
+      "signals": 5071,
+      "summary": {
+        "signals": 5071,
+        "wins": 2315,
+        "losses": 2754,
+        "timeouts": 2,
+        "win_rate": 0.45651745217905737,
+        "loss_rate": 0.543088148294222,
+        "timeout_rate": 0.00039439952672056796,
+        "average_return": 0.00005499450192634393,
+        "median_return": -0.0003089929302417561,
+        "std_dev_return": 0.003836472517240695,
+        "expectancy": 0.0000549945019263419,
+        "profit_factor": 1.0415727329452307,
+        "cumulative_return": 0.2733244313018439,
+        "max_drawdown": 0.19974875935361283,
+        "sharpe": 1.0207843119097473,
+        "mae": 0.02166156041981964,
+        "mfe": 0.02492820676451819
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "horizon": "1h",
+      "signals": 5071,
+      "summary": {
+        "signals": 5071,
+        "wins": 2271,
+        "losses": 2799,
+        "timeouts": 1,
+        "win_rate": 0.44784066259120486,
+        "loss_rate": 0.5519621376454348,
+        "timeout_rate": 0.00019719976336028398,
+        "average_return": -0.00004804824838192121,
+        "median_return": -0.000626576802071308,
+        "std_dev_return": 0.007614746183503153,
+        "expectancy": -0.00004804824838191592,
+        "profit_factor": 0.98136851200996,
+        "cumulative_return": -0.32290808693484485,
+        "max_drawdown": 0.5665261535093703,
+        "sharpe": -0.4493336393768977,
+        "mae": 0.04796436013508661,
+        "mfe": 0.09212774471382557
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "horizon": "4h",
+      "signals": 5071,
+      "summary": {
+        "signals": 5071,
+        "wins": 2436,
+        "losses": 2635,
+        "timeouts": 0,
+        "win_rate": 0.48037862354565175,
+        "loss_rate": 0.5196213764543482,
+        "timeout_rate": 0,
+        "average_return": 0.000391960074520227,
+        "median_return": -0.00040818009400521004,
+        "std_dev_return": 0.014357825641162567,
+        "expectancy": 0.0003919600745202331,
+        "profit_factor": 1.086406221355558,
+        "cumulative_return": 3.3656843645633874,
+        "max_drawdown": 0.8188323364398514,
+        "sharpe": 1.9440165675342198,
+        "mae": 0.07791016448755798,
+        "mfe": 0.1598311506125084
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "horizon": "15m",
+      "signals": 7673,
+      "summary": {
+        "signals": 7673,
+        "wins": 3572,
+        "losses": 4025,
+        "timeouts": 76,
+        "win_rate": 0.46552847647595463,
+        "loss_rate": 0.5245666623224293,
+        "timeout_rate": 0.009904861201616056,
+        "average_return": 0.000014807484681108017,
+        "median_return": -0.00034723944640107734,
+        "std_dev_return": 0.006114833282325654,
+        "expectancy": 0.000014807484681099003,
+        "profit_factor": 1.0069688253894038,
+        "cumulative_return": -0.029026436614136286,
+        "max_drawdown": 0.5416735729176517,
+        "sharpe": 0.21211885315706144,
+        "mae": 0.05968157116979698,
+        "mfe": 0.05840455840455843
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "horizon": "1h",
+      "signals": 7673,
+      "summary": {
+        "signals": 7673,
+        "wins": 3571,
+        "losses": 4057,
+        "timeouts": 45,
+        "win_rate": 0.4653981493548808,
+        "loss_rate": 0.5287371301967939,
+        "timeout_rate": 0.0058647204483252965,
+        "average_return": 0.00012721623715750762,
+        "median_return": -0.0006436135977999252,
+        "std_dev_return": 0.011565474498169312,
+        "expectancy": 0.0001272162371575153,
+        "profit_factor": 1.0322649061893778,
+        "cumulative_return": 0.5920865129735906,
+        "max_drawdown": 0.7846596426518944,
+        "sharpe": 0.9635221202415993,
+        "mae": 0.07872870793518902,
+        "mfe": 0.07979656260961061
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "horizon": "4h",
+      "signals": 7673,
+      "summary": {
+        "signals": 7673,
+        "wins": 3781,
+        "losses": 3877,
+        "timeouts": 15,
+        "win_rate": 0.4927668447803988,
+        "loss_rate": 0.5052782484034928,
+        "timeout_rate": 0.0019549068161084323,
+        "average_return": 0.0009386408068735694,
+        "median_return": -0.00027647221454257993,
+        "std_dev_return": 0.02107701238998248,
+        "expectancy": 0.0009386408068735828,
+        "profit_factor": 1.1313367591945158,
+        "cumulative_return": 244.46787939776934,
+        "max_drawdown": 0.9345419973020747,
+        "sharpe": 3.9009733130325164,
+        "mae": 0.1432677108779998,
+        "mfe": 0.14805383775918518
+      }
+    },
+    {
+      "symbol": "XRPUSDT",
+      "horizon": "15m",
+      "signals": 5443,
+      "summary": {
+        "signals": 5443,
+        "wins": 2426,
+        "losses": 2922,
+        "timeouts": 95,
+        "win_rate": 0.44571008634943965,
+        "loss_rate": 0.5368363035090943,
+        "timeout_rate": 0.017453610141466104,
+        "average_return": 0.00002342205087496998,
+        "median_return": -0.0003654080389768173,
+        "std_dev_return": 0.007038660481657313,
+        "expectancy": 0.000023422050874963036,
+        "profit_factor": 1.0111703516705857,
+        "cumulative_return": -0.006227316744046862,
+        "max_drawdown": 0.46569380383047504,
+        "sharpe": 0.24550145486873376,
+        "mae": 0.05417852955953775,
+        "mfe": 0.12568008705114259
+      }
+    },
+    {
+      "symbol": "XRPUSDT",
+      "horizon": "1h",
+      "signals": 5443,
+      "summary": {
+        "signals": 5443,
+        "wins": 2439,
+        "losses": 2954,
+        "timeouts": 50,
+        "win_rate": 0.44809847510564027,
+        "loss_rate": 0.542715414293588,
+        "timeout_rate": 0.009186110600771633,
+        "average_return": 0.00020472651250149645,
+        "median_return": -0.0007270083605962686,
+        "std_dev_return": 0.012992793273660834,
+        "expectancy": 0.00020472651250150447,
+        "profit_factor": 1.0535128835012724,
+        "cumulative_return": 0.9334862280604026,
+        "max_drawdown": 0.8586503370851638,
+        "sharpe": 1.1624940185699897,
+        "mae": 0.10487042823010473,
+        "mfe": 0.12782893710004678
+      }
+    },
+    {
+      "symbol": "XRPUSDT",
+      "horizon": "4h",
+      "signals": 5443,
+      "summary": {
+        "signals": 5443,
+        "wins": 2456,
+        "losses": 2959,
+        "timeouts": 28,
+        "win_rate": 0.4512217527099026,
+        "loss_rate": 0.5436340253536652,
+        "timeout_rate": 0.005144221936432115,
+        "average_return": 0.0011563372263632575,
+        "median_return": -0.00121233113959133,
+        "std_dev_return": 0.02293213392131996,
+        "expectancy": 0.0011563372263632618,
+        "profit_factor": 1.173428008826744,
+        "cumulative_return": 132.3839803542225,
+        "max_drawdown": 0.9973530192780755,
+        "sharpe": 3.720139324000528,
+        "mae": 0.11410926699182418,
+        "mfe": 0.1656877766428328
+      }
+    }
+  ],
+  "by_score_bucket": [
+    {
+      "score_bucket": "50-54",
+      "number_of_signals": 0,
+      "win_rate": null,
+      "average_return": null,
+      "median_return": null,
+      "profit_factor": null,
+      "mae": null,
+      "mfe": null
+    },
+    {
+      "score_bucket": "55-59",
+      "number_of_signals": 0,
+      "win_rate": null,
+      "average_return": null,
+      "median_return": null,
+      "profit_factor": null,
+      "mae": null,
+      "mfe": null
+    },
+    {
+      "score_bucket": "60-64",
+      "number_of_signals": 0,
+      "win_rate": null,
+      "average_return": null,
+      "median_return": null,
+      "profit_factor": null,
+      "mae": null,
+      "mfe": null
+    },
+    {
+      "score_bucket": "65-69",
+      "number_of_signals": 0,
+      "win_rate": null,
+      "average_return": null,
+      "median_return": null,
+      "profit_factor": null,
+      "mae": null,
+      "mfe": null
+    },
+    {
+      "score_bucket": "70-74",
+      "number_of_signals": 0,
+      "win_rate": null,
+      "average_return": null,
+      "median_return": null,
+      "profit_factor": null,
+      "mae": null,
+      "mfe": null
+    },
+    {
+      "score_bucket": "75-79",
+      "number_of_signals": 8870,
+      "win_rate": 0.4579481397970688,
+      "average_return": 0.000013280482312243123,
+      "median_return": -0.00023908919747671635,
+      "profit_factor": 1.0101218078414695,
+      "mae": 0.030807086614173185,
+      "mfe": 0.05111938922288195
+    },
+    {
+      "score_bucket": "80-84",
+      "number_of_signals": 6304,
+      "win_rate": 0.4606598984771574,
+      "average_return": 0.000050342201289483095,
+      "median_return": -0.0002928511584454382,
+      "profit_factor": 1.0325809085974926,
+      "mae": 0.05968157116979698,
+      "mfe": 0.05129307256966829
+    },
+    {
+      "score_bucket": "85-89",
+      "number_of_signals": 3862,
+      "win_rate": 0.45986535473847745,
+      "average_return": 0.00003446728720442156,
+      "median_return": -0.00037689830787697605,
+      "profit_factor": 1.0178674073430938,
+      "mae": 0.05364037506894641,
+      "mfe": 0.05019016226272684
+    },
+    {
+      "score_bucket": "90-94",
+      "number_of_signals": 2221,
+      "win_rate": 0.4606033318325079,
+      "average_return": 0.00010539188829918572,
+      "median_return": -0.00039797600773206653,
+      "profit_factor": 1.0468657845151443,
+      "mae": 0.04237811978540172,
+      "mfe": 0.12568008705114259
+    },
+    {
+      "score_bucket": "95-100",
+      "number_of_signals": 1851,
+      "win_rate": 0.4505672609400324,
+      "average_return": -0.00004759004162598429,
+      "median_return": -0.0008333333333333156,
+      "profit_factor": 0.9862418129048027,
+      "mae": 0.05417852955953775,
+      "mfe": 0.08209770563446227
+    }
+  ],
+  "by_period": {
+    "monthly": [
+      {
+        "period": "2023-10",
+        "signals": 1315,
+        "win_rate": 0.47604562737642586,
+        "average_return": 0.00008214042184532547,
+        "cumulative_return": 0.08755831188009089,
+        "drawdown": 0.15303428731849505
+      },
+      {
+        "period": "2023-11",
+        "signals": 1665,
+        "win_rate": 0.46726726726726725,
+        "average_return": 0.0000998234488827341,
+        "cumulative_return": 0.14295876294231435,
+        "drawdown": 0.19232474368134025
+      },
+      {
+        "period": "2023-12",
+        "signals": 1796,
+        "win_rate": 0.45879732739420936,
+        "average_return": 0.00015184357226410847,
+        "cumulative_return": 0.28150200355676236,
+        "drawdown": 0.10640266713385046
+      },
+      {
+        "period": "2024-01",
+        "signals": 1364,
+        "win_rate": 0.4655425219941349,
+        "average_return": 0.00010272155722174444,
+        "cumulative_return": 0.1263501944665788,
+        "drawdown": 0.1206359258224869
+      },
+      {
+        "period": "2024-02",
+        "signals": 1651,
+        "win_rate": 0.47122955784373105,
+        "average_return": 0.00006903750702524603,
+        "cumulative_return": 0.1016394808197687,
+        "drawdown": 0.12141910436836276
+      },
+      {
+        "period": "2024-03",
+        "signals": 1954,
+        "win_rate": 0.4503582395087001,
+        "average_return": -0.00018961438487765224,
+        "cumulative_return": -0.3327966676791386,
+        "drawdown": 0.3708085554751616
+      },
+      {
+        "period": "2024-04",
+        "signals": 1166,
+        "win_rate": 0.4159519725557461,
+        "average_return": -0.00016912148253293513,
+        "cumulative_return": -0.1873133586630673,
+        "drawdown": 0.23185077321187295
+      },
+      {
+        "period": "2024-05",
+        "signals": 1510,
+        "win_rate": 0.452317880794702,
+        "average_return": 0.00008480214817963461,
+        "cumulative_return": 0.12041038897753453,
+        "drawdown": 0.17351362192493594
+      },
+      {
+        "period": "2024-06",
+        "signals": 963,
+        "win_rate": 0.42679127725856697,
+        "average_return": -0.00018679917911998916,
+        "cumulative_return": -0.17002258792604108,
+        "drawdown": 0.1844994778847689
+      },
+      {
+        "period": "2024-07",
+        "signals": 1830,
+        "win_rate": 0.4715846994535519,
+        "average_return": 0.00011398402650948612,
+        "cumulative_return": 0.21132103601797447,
+        "drawdown": 0.07488531614946371
+      },
+      {
+        "period": "2024-08",
+        "signals": 1337,
+        "win_rate": 0.4412864622288706,
+        "average_return": -0.00007647643953899357,
+        "cumulative_return": -0.11913473744599035,
+        "drawdown": 0.18573715562068366
+      },
+      {
+        "period": "2024-09",
+        "signals": 1323,
+        "win_rate": 0.4618291761148904,
+        "average_return": -0.000043156980291518524,
+        "cumulative_return": -0.0636838572928593,
+        "drawdown": 0.1469382873956563
+      },
+      {
+        "period": "2024-10",
+        "signals": 1297,
+        "win_rate": 0.448727833461835,
+        "average_return": -0.00004930567199526036,
+        "cumulative_return": -0.06830213588336065,
+        "drawdown": 0.10819873845719785
+      },
+      {
+        "period": "2024-11",
+        "signals": 2403,
+        "win_rate": 0.47399084477736164,
+        "average_return": 0.00025225195053889477,
+        "cumulative_return": 0.7042051138813319,
+        "drawdown": 0.22739465735917988
+      },
+      {
+        "period": "2024-12",
+        "signals": 1534,
+        "win_rate": 0.4654498044328553,
+        "average_return": -0.000038259079551231515,
+        "cumulative_return": -0.08646843088959377,
+        "drawdown": 0.27774384750291686
+      }
+    ],
+    "quarterly": [
+      {
+        "period": "2023-Q4",
+        "signals": 4776,
+        "win_rate": 0.466499162479062,
+        "average_return": 0.00011451669868146823,
+        "cumulative_return": 0.5929509494947875,
+        "drawdown": 0.23480712445793722
+      },
+      {
+        "period": "2024-Q1",
+        "signals": 4969,
+        "win_rate": 0.46146105856309116,
+        "average_return": -0.000023427929141032814,
+        "cumulative_return": -0.17211285919805253,
+        "drawdown": 0.3939004637712061
+      },
+      {
+        "period": "2024-Q2",
+        "signals": 3639,
+        "win_rate": 0.4339104149491619,
+        "average_return": -0.00006843418916589812,
+        "cumulative_return": -0.2442702458400683,
+        "drawdown": 0.35314296734687955
+      },
+      {
+        "period": "2024-Q3",
+        "signals": 4490,
+        "win_rate": 0.45968819599109134,
+        "average_return": 0.000010967724704464604,
+        "cumulative_return": -0.0009407297795848146,
+        "drawdown": 0.2141647941885926
+      },
+      {
+        "period": "2024-Q4",
+        "signals": 5234,
+        "win_rate": 0.46522735957202904,
+        "average_return": 0.00009238107614358487,
+        "cumulative_return": 0.4505093212984106,
+        "drawdown": 0.29721430889373823
+      }
+    ]
+  },
+  "by_split": [
+    {
+      "name": "TRAIN",
+      "from_timestamp": "2023-10-06T02:15:00.000Z",
+      "to_timestamp": "2024-12-31T17:00:00.000Z",
+      "signals": 23108,
+      "summary": {
+        "signals": 23108,
+        "wins": 10599,
+        "losses": 12333,
+        "timeouts": 176,
+        "win_rate": 0.45867232127401764,
+        "loss_rate": 0.5337112688246495,
+        "timeout_rate": 0.007616409901332871,
+        "average_return": 0.00003090938181948977,
+        "median_return": -0.0003123052968617552,
+        "std_dev_return": 0.005490202445372315,
+        "expectancy": 0.00003090938181949548,
+        "profit_factor": 1.0177560698649712,
+        "cumulative_return": 0.44428147020314634,
+        "max_drawdown": 0.6449205021530182,
+        "sharpe": 0.855821396042269,
+        "mae": 0.05968157116979698,
+        "mfe": 0.12568008705114259
+      }
+    },
+    {
+      "name": "VALIDATION",
+      "from_timestamp": null,
+      "to_timestamp": null,
+      "signals": 0,
+      "summary": {
+        "signals": 0,
+        "wins": 0,
+        "losses": 0,
+        "timeouts": 0,
+        "win_rate": null,
+        "loss_rate": null,
+        "timeout_rate": null,
+        "average_return": null,
+        "median_return": null,
+        "std_dev_return": null,
+        "expectancy": null,
+        "profit_factor": null,
+        "cumulative_return": null,
+        "max_drawdown": null,
+        "sharpe": null,
+        "mae": null,
+        "mfe": null
+      }
+    },
+    {
+      "name": "TEST",
+      "from_timestamp": null,
+      "to_timestamp": null,
+      "signals": 0,
+      "summary": {
+        "signals": 0,
+        "wins": 0,
+        "losses": 0,
+        "timeouts": 0,
+        "win_rate": null,
+        "loss_rate": null,
+        "timeout_rate": null,
+        "average_return": null,
+        "median_return": null,
+        "std_dev_return": null,
+        "expectancy": null,
+        "profit_factor": null,
+        "cumulative_return": null,
+        "max_drawdown": null,
+        "sharpe": null,
+        "mae": null,
+        "mfe": null
+      }
+    }
+  ],
+  "regime_analysis": [
+    {
+      "regime": "SETUP LONG",
+      "signals": 23108,
+      "win_rate": 0.45867232127401764,
+      "average_return": 0.000030909381819489754,
+      "expectancy": 0.000030909381819495046,
+      "profit_factor": 1.017756069864971
+    }
+  ],
+  "signal_distribution": {
+    "percentiles": [
+      {
+        "percentile": 5,
+        "value": -0.0072507552870090695
+      },
+      {
+        "percentile": 10,
+        "value": -0.00499479708636826
+      },
+      {
+        "percentile": 25,
+        "value": -0.002440843447013449
+      },
+      {
+        "percentile": 50,
+        "value": -0.00031269543464661974
+      },
+      {
+        "percentile": 75,
+        "value": 0.002124044180118977
+      },
+      {
+        "percentile": 90,
+        "value": 0.005397682171773232
+      },
+      {
+        "percentile": 95,
+        "value": 0.008414393589150903
+      }
+    ],
+    "best_10": [
+      {
+        "symbol": "XRPUSDT",
+        "score": 90,
+        "signal_timestamp": "2024-08-07T20:15:00.000Z",
+        "return_15m": 0.12568008705114259
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 97,
+        "signal_timestamp": "2024-03-11T15:45:00.000Z",
+        "return_15m": 0.08209770563446227
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 96,
+        "signal_timestamp": "2024-12-02T14:30:00.000Z",
+        "return_15m": 0.07665419254019817
+      },
+      {
+        "symbol": "SOLUSDT",
+        "score": 92,
+        "signal_timestamp": "2023-11-01T17:45:00.000Z",
+        "return_15m": 0.05840455840455843
+      },
+      {
+        "symbol": "BTCUSDT",
+        "score": 100,
+        "signal_timestamp": "2023-10-23T22:30:00.000Z",
+        "return_15m": 0.055415159257874914
+      },
+      {
+        "symbol": "SOLUSDT",
+        "score": 81,
+        "signal_timestamp": "2024-06-27T13:00:00.000Z",
+        "return_15m": 0.05129307256966829
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 75,
+        "signal_timestamp": "2024-12-03T11:45:00.000Z",
+        "return_15m": 0.05111938922288195
+      },
+      {
+        "symbol": "BTCUSDT",
+        "score": 86,
+        "signal_timestamp": "2023-10-16T13:15:00.000Z",
+        "return_15m": 0.05019016226272684
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 100,
+        "signal_timestamp": "2024-03-11T16:15:00.000Z",
+        "return_15m": 0.050043140638481365
+      },
+      {
+        "symbol": "SOLUSDT",
+        "score": 88,
+        "signal_timestamp": "2023-10-16T13:15:00.000Z",
+        "return_15m": 0.04790419161676651
+      }
+    ],
+    "worst_10": [
+      {
+        "symbol": "SOLUSDT",
+        "score": 81,
+        "signal_timestamp": "2024-01-09T21:15:00.000Z",
+        "return_15m": -0.05968157116979698
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 100,
+        "signal_timestamp": "2024-11-16T15:00:00.000Z",
+        "return_15m": -0.05417852955953775
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 87,
+        "signal_timestamp": "2024-11-22T13:15:00.000Z",
+        "return_15m": -0.05364037506894641
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 89,
+        "signal_timestamp": "2023-11-13T21:15:00.000Z",
+        "return_15m": -0.05016577771370902
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 99,
+        "signal_timestamp": "2024-12-02T01:30:00.000Z",
+        "return_15m": -0.04843693567157583
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 100,
+        "signal_timestamp": "2024-11-14T22:30:00.000Z",
+        "return_15m": -0.04254813406227722
+      },
+      {
+        "symbol": "BTCUSDT",
+        "score": 91,
+        "signal_timestamp": "2024-01-09T21:15:00.000Z",
+        "return_15m": -0.04237811978540172
+      },
+      {
+        "symbol": "XRPUSDT",
+        "score": 100,
+        "signal_timestamp": "2024-11-16T11:15:00.000Z",
+        "return_15m": -0.04115643126783902
+      },
+      {
+        "symbol": "SOLUSDT",
+        "score": 82,
+        "signal_timestamp": "2023-11-09T15:15:00.000Z",
+        "return_15m": -0.040299127544661355
+      },
+      {
+        "symbol": "SOLUSDT",
+        "score": 91,
+        "signal_timestamp": "2024-03-05T16:00:00.000Z",
+        "return_15m": -0.038726828567323
+      }
+    ]
+  },
+  "integrity_checks": {
+    "no_lookahead": true,
+    "no_nans": true,
+    "no_infinities": true,
+    "no_duplicate_signals": true,
+    "all_timestamps_valid": true,
+    "all_outcomes_populated": true,
+    "validation_warnings": []
+  }
+}

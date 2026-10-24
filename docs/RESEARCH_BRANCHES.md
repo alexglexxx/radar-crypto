@@ -1,6 +1,6 @@
 # Inventario de ramas de investigación (2026-10-23)
 
-Nueve ramas `origin/research/*`. Ninguna está integrada en `main` ni cambia producción. Los resultados no viven en el repositorio: son artefactos de GitHub Actions (retención por defecto de 90 días, vencen hacia enero de 2027). Se descargaron las ejecuciones más recientes de cada rama y se leyeron sus JSON. Un workflow en verde solo indica que el código terminó; un "failure" puede ser el gate de calificación funcionando.
+Nueve ramas `origin/research/*`. Ninguna está integrada en `main` ni cambia producción. Los resultados se generaron como artefactos de GitHub Actions (retención de 90 días, vencen entre el 1 y el 19 de enero de 2027). Desde el 2026-10-24 los 38 artefactos están copiados en [`research-artifacts/`](research-artifacts/README.md) con manifiesto SHA-256. Se descargaron las ejecuciones más recientes de cada rama y se leyeron sus JSON. Un workflow en verde solo indica que el código terminó; un "failure" puede ser el gate de calificación funcionando.
 
 Coste: bps de ida y vuelta. OOS: fuera de muestra. Todas entran en la apertura siguiente a la vela de señal, salvo donde se indica.
 

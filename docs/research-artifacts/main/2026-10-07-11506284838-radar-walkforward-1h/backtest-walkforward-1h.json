@@ -1,0 +1,250 @@
+{
+  "report_name": "radar-crypto-walkforward-1h",
+  "generated_at": "2026-10-07T19:49:10.520Z",
+  "production_untouched": true,
+  "methodology": {
+    "train_months": 12,
+    "test_months": 3,
+    "thresholds": [
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90
+    ],
+    "cost_bps_round_trip": 15,
+    "threshold_selection": "train-only; highest training expectancy with >=100 observations; OOS never used for selection.",
+    "event_study_caveat": "Signals overlap at 1h frequency. testNonOverlapping enforces a 4h cooldown/hold proxy and is the primary OOS diagnostic.",
+    "not_deployable": true
+  },
+  "coverage": [
+    {
+      "symbol": "BTCUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    },
+    {
+      "symbol": "ETHUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    },
+    {
+      "symbol": "SOLUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    },
+    {
+      "symbol": "XRPUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    }
+  ],
+  "folds": [
+    {
+      "fold": 1,
+      "train": "2024-10-01..2025-10-01",
+      "test": "2025-10-01..2026-01-01",
+      "selectedThreshold": 90,
+      "trainBest": {
+        "threshold": 90,
+        "trades": 1234,
+        "winRate": 0.4683954619124797,
+        "expectancy": 0.0015433991898600563,
+        "profitFactor": 1.2086271116087617,
+        "totalReturn": 1.9045546002873095
+      },
+      "testStats": {
+        "threshold": 90,
+        "trades": 144,
+        "winRate": 0.3958333333333333,
+        "expectancy": -0.002934249908159518,
+        "profitFactor": 0.5850685913408502,
+        "totalReturn": -0.4225319867749706
+      },
+      "testNonOverlapping": {
+        "threshold": 90,
+        "trades": 58,
+        "winRate": 0.3620689655172414,
+        "expectancy": -0.0036546285436630495,
+        "profitFactor": 0.5362389279075976,
+        "totalReturn": -0.21196845553245688
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1668,
+        "winRate": 0.39748201438848924,
+        "expectancy": -0.002578479699401859,
+        "profitFactor": 0.5929111957767577,
+        "totalReturn": -4.300904138602301
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 659,
+        "winRate": 0.3915022761760243,
+        "expectancy": -0.0026023787389915028,
+        "profitFactor": 0.5984774874598945,
+        "totalReturn": -1.7149675889954004
+      }
+    },
+    {
+      "fold": 2,
+      "train": "2025-01-01..2026-01-01",
+      "test": "2026-01-01..2026-04-01",
+      "selectedThreshold": 90,
+      "trainBest": {
+        "threshold": 90,
+        "trades": 973,
+        "winRate": 0.45323741007194246,
+        "expectancy": -0.00031164932217340004,
+        "profitFactor": 0.9560817135528861,
+        "totalReturn": -0.30323479047471824
+      },
+      "testStats": {
+        "threshold": 90,
+        "trades": 210,
+        "winRate": 0.48095238095238096,
+        "expectancy": -0.001452287986736067,
+        "profitFactor": 0.8144114922201784,
+        "totalReturn": -0.30498047721457405
+      },
+      "testNonOverlapping": {
+        "threshold": 90,
+        "trades": 54,
+        "winRate": 0.48148148148148145,
+        "expectancy": -0.0019848146751244166,
+        "profitFactor": 0.7023194358196595,
+        "totalReturn": -0.10717999245671848
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1603,
+        "winRate": 0.4248284466625078,
+        "expectancy": -0.001380324653616871,
+        "profitFactor": 0.7614256499644741,
+        "totalReturn": -2.212660419747844
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 734,
+        "winRate": 0.45095367847411444,
+        "expectancy": -0.0005569924146816267,
+        "profitFactor": 0.9088763360974754,
+        "totalReturn": -0.408832432376314
+      }
+    },
+    {
+      "fold": 3,
+      "train": "2025-04-01..2026-04-01",
+      "test": "2026-04-01..2026-07-01",
+      "selectedThreshold": 80,
+      "trainBest": {
+        "threshold": 80,
+        "trades": 3368,
+        "winRate": 0.43646080760095013,
+        "expectancy": -0.0010335840451379,
+        "profitFactor": 0.830838403200107,
+        "totalReturn": -3.4811110640244474
+      },
+      "testStats": {
+        "threshold": 80,
+        "trades": 606,
+        "winRate": 0.3580858085808581,
+        "expectancy": -0.0018935480652078895,
+        "profitFactor": 0.6612717281432543,
+        "totalReturn": -1.147490127515981
+      },
+      "testNonOverlapping": {
+        "threshold": 80,
+        "trades": 135,
+        "winRate": 0.4074074074074074,
+        "expectancy": -0.000891748383712846,
+        "profitFactor": 0.8171987069914987,
+        "totalReturn": -0.12038603180123422
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1556,
+        "winRate": 0.35989717223650386,
+        "expectancy": -0.0020939884349132345,
+        "profitFactor": 0.597293768257812,
+        "totalReturn": -3.258246004724993
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 606,
+        "winRate": 0.3580858085808581,
+        "expectancy": -0.0018935480652078895,
+        "profitFactor": 0.6612717281432543,
+        "totalReturn": -1.147490127515981
+      }
+    },
+    {
+      "fold": 4,
+      "train": "2025-07-01..2026-07-01",
+      "test": "2026-07-01..2026-10-01",
+      "selectedThreshold": 85,
+      "trainBest": {
+        "threshold": 85,
+        "trades": 1681,
+        "winRate": 0.42058298631766805,
+        "expectancy": -0.0011431234987971865,
+        "profitFactor": 0.8167252904241862,
+        "totalReturn": -1.9215906014780704
+      },
+      "testStats": {
+        "threshold": 85,
+        "trades": 454,
+        "winRate": 0.45594713656387664,
+        "expectancy": 0.001751377370375131,
+        "profitFactor": 1.285449998267881,
+        "totalReturn": 0.7951253261503095
+      },
+      "testNonOverlapping": {
+        "threshold": 85,
+        "trades": 110,
+        "winRate": 0.44545454545454544,
+        "expectancy": 0.00015311308880315376,
+        "profitFactor": 1.0290348019406175,
+        "totalReturn": 0.016842439768346915
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1940,
+        "winRate": 0.4195876288659794,
+        "expectancy": 0.00033420854642971404,
+        "profitFactor": 1.0699633268536977,
+        "totalReturn": 0.6483645800736453
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 820,
+        "winRate": 0.4402439024390244,
+        "expectancy": 0.0010246437337850423,
+        "profitFactor": 1.1845854522328807,
+        "totalReturn": 0.8402078617037347
+      }
+    }
+  ],
+  "summary": {
+    "folds": 4,
+    "selectedThresholds": [
+      90,
+      90,
+      80,
+      85
+    ],
+    "oosNonOverlappingExpectancies": [
+      -0.0036546285436630495,
+      -0.0019848146751244166,
+      -0.000891748383712846,
+      0.00015311308880315376
+    ],
+    "positiveOosFolds": 1
+  }
+}

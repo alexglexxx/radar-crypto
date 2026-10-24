@@ -1,0 +1,146 @@
+{
+  "report_name": "radar-crypto-discovery-1h",
+  "generated_at": "2026-10-07T19:19:46.145Z",
+  "data": {
+    "requestedStart": "2024-10-01T00:00:00.000Z",
+    "requestedEnd": "2026-09-30T23:59:59.999Z",
+    "months": 24,
+    "interval": "1h",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "total_observations": 69104,
+    "coverage": [
+      {
+        "symbol": "BTCUSDT",
+        "requestedMonths": 24,
+        "loadedMonths": 24,
+        "missingMonths": [],
+        "expectedHourlyCandles": 17520,
+        "actualCandles": 17520,
+        "coverageRatio": 1,
+        "firstCandle": "2024-10-01T00:00:00.000Z",
+        "lastCandle": "2026-09-30T23:00:00.000Z",
+        "gaps": 0,
+        "maxGapHours": 0
+      },
+      {
+        "symbol": "ETHUSDT",
+        "requestedMonths": 24,
+        "loadedMonths": 24,
+        "missingMonths": [],
+        "expectedHourlyCandles": 17520,
+        "actualCandles": 17520,
+        "coverageRatio": 1,
+        "firstCandle": "2024-10-01T00:00:00.000Z",
+        "lastCandle": "2026-09-30T23:00:00.000Z",
+        "gaps": 0,
+        "maxGapHours": 0
+      },
+      {
+        "symbol": "SOLUSDT",
+        "requestedMonths": 24,
+        "loadedMonths": 24,
+        "missingMonths": [],
+        "expectedHourlyCandles": 17520,
+        "actualCandles": 17520,
+        "coverageRatio": 1,
+        "firstCandle": "2024-10-01T00:00:00.000Z",
+        "lastCandle": "2026-09-30T23:00:00.000Z",
+        "gaps": 0,
+        "maxGapHours": 0
+      },
+      {
+        "symbol": "XRPUSDT",
+        "requestedMonths": 24,
+        "loadedMonths": 24,
+        "missingMonths": [],
+        "expectedHourlyCandles": 17520,
+        "actualCandles": 17520,
+        "coverageRatio": 1,
+        "firstCandle": "2024-10-01T00:00:00.000Z",
+        "lastCandle": "2026-09-30T23:00:00.000Z",
+        "gaps": 0,
+        "maxGapHours": 0
+      }
+    ]
+  },
+  "methodology": {
+    "purpose": "Fast discovery screen for monotonic predictive structure, not a production backtest.",
+    "production_untouched": true,
+    "fee_bps": 10,
+    "slippage_bps": 5,
+    "score_note": "Candidate score reuses production indicator families with 1h-normalized horizons; it is research-only."
+  },
+  "by_score": [
+    {
+      "bucket": "0-39",
+      "signals": 22178,
+      "winRate4h": 0.4555415276400036,
+      "avg1h": 0.000057898370987942576,
+      "avg4hNet": -0.001359410327825926,
+      "avg12h": 0.00020551878947795615,
+      "avg24h": 0.0008265389142447821
+    },
+    {
+      "bucket": "40-49",
+      "signals": 10416,
+      "winRate4h": 0.4113863287250384,
+      "avg1h": -0.00011131675901401368,
+      "avg4hNet": -0.0015386817075011257,
+      "avg12h": -0.000004224433306525812,
+      "avg24h": 0.00027336572991863364
+    },
+    {
+      "bucket": "50-59",
+      "signals": 11296,
+      "winRate4h": 0.4112960339943343,
+      "avg1h": 0.000008996936043194029,
+      "avg4hNet": -0.0015237746007597658,
+      "avg12h": -0.0002770612617084073,
+      "avg24h": -0.00010253335808505963
+    },
+    {
+      "bucket": "60-69",
+      "signals": 10200,
+      "winRate4h": 0.4116666666666667,
+      "avg1h": 0.000035064019864761435,
+      "avg4hNet": -0.0014588261245795783,
+      "avg12h": 0.0005516286624239506,
+      "avg24h": 0.0007227998378312497
+    },
+    {
+      "bucket": "70-79",
+      "signals": 8292,
+      "winRate4h": 0.40918958031837915,
+      "avg1h": 0.00017649719526471644,
+      "avg4hNet": -0.0012689319895320243,
+      "avg12h": 0.0012665163152983218,
+      "avg24h": 0.001982981459101359
+    },
+    {
+      "bucket": "80-100",
+      "signals": 6722,
+      "winRate4h": 0.4330556382029158,
+      "avg1h": 0.00017792464529009681,
+      "avg4hNet": -0.0003174189414228532,
+      "avg12h": 0.0031135816156422796,
+      "avg24h": 0.005068754681179258
+    }
+  ],
+  "comparison": {
+    "high_ge70": {
+      "signals": 15014,
+      "avg4hNet": -0.0008429248822061996,
+      "winRate4h": 0.419874783535367
+    },
+    "low_lt50": {
+      "signals": 32594,
+      "avg4hNet": -0.001416699727430045,
+      "winRate4h": 0.4414309382094864
+    }
+  }
+}

@@ -1,0 +1,774 @@
+{
+  "report_name": "radar-crypto-walkforward-1h",
+  "generated_at": "2026-10-21T07:35:57.261Z",
+  "production_untouched": true,
+  "methodology": {
+    "train_months": 12,
+    "test_months": 3,
+    "thresholds": [
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90
+    ],
+    "cost_bps_round_trip": 15,
+    "cost_sensitivity_bps": [
+      15,
+      20,
+      25
+    ],
+    "threshold_selection": "train-only; highest training expectancy with >=100 observations; OOS never used for selection.",
+    "event_study_caveat": "Signals overlap at 1h frequency. testNonOverlapping enforces a 4h cooldown/hold proxy independently per symbol and is the primary OOS diagnostic.",
+    "baseline_note": "Baseline uses the same next-open-to-4h-open execution model with a 4h per-symbol cooldown; signal trades are non-overlapping per symbol.",
+    "execution_model": "Signal evaluated on candle i close; entry at candle i+1 open; hold 4 complete 1h candles; exit at candle i+5 open. No same-candle execution.",
+    "regime_model": "Trend: EMA50 vs EMA200 with 1% hysteresis. Volatility: ATR14/close, low <0.4%, normal 0.4%-1.2%, high >1.2%. These labels are descriptive diagnostics, not optimized trading rules.",
+    "not_deployable": true
+  },
+  "coverage": [
+    {
+      "symbol": "BTCUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    },
+    {
+      "symbol": "ETHUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    },
+    {
+      "symbol": "SOLUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    },
+    {
+      "symbol": "XRPUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "gaps": 0
+    }
+  ],
+  "folds": [
+    {
+      "fold": 1,
+      "train": "2024-10-01..2025-10-01",
+      "test": "2025-10-01..2026-01-01",
+      "selectedThreshold": 90,
+      "trainBest": {
+        "threshold": 90,
+        "trades": 1234,
+        "winRate": 0.4683954619124797,
+        "expectancy": 0.0015430714274624786,
+        "profitFactor": 1.2085459273049022,
+        "totalReturn": 1.9041501414886985
+      },
+      "testStats": {
+        "threshold": 90,
+        "trades": 144,
+        "winRate": 0.3958333333333333,
+        "expectancy": -0.002942281354280485,
+        "profitFactor": 0.5843034412744761,
+        "totalReturn": -0.4236885150163898
+      },
+      "testNonOverlapping": {
+        "threshold": 90,
+        "trades": 93,
+        "winRate": 0.41935483870967744,
+        "expectancy": -0.0023556302069546262,
+        "profitFactor": 0.6709077646552499,
+        "totalReturn": -0.21907360924678024
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1668,
+        "winRate": 0.39748201438848924,
+        "expectancy": -0.002579541885721846,
+        "profitFactor": 0.5928035170987989,
+        "totalReturn": -4.302675865384039
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 659,
+        "winRate": 0.3915022761760243,
+        "expectancy": -0.0026060220035877837,
+        "profitFactor": 0.5980626270749497,
+        "totalReturn": -1.7173685003643493
+      },
+      "costSensitivity": [
+        {
+          "cost_bps_round_trip": 15,
+          "all": {
+            "threshold": 90,
+            "trades": 144,
+            "winRate": 0.3958333333333333,
+            "expectancy": -0.002942281354280485,
+            "profitFactor": 0.5843034412744761,
+            "totalReturn": -0.4236885150163898
+          },
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 93,
+            "winRate": 0.41935483870967744,
+            "expectancy": -0.0023556302069546262,
+            "profitFactor": 0.6709077646552499,
+            "totalReturn": -0.21907360924678024
+          }
+        },
+        {
+          "cost_bps_round_trip": 20,
+          "all": {
+            "threshold": 90,
+            "trades": 144,
+            "winRate": 0.3958333333333333,
+            "expectancy": -0.0034422813542804853,
+            "profitFactor": 0.5335686072275253,
+            "totalReturn": -0.4956885150163899
+          },
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 93,
+            "winRate": 0.41935483870967744,
+            "expectancy": -0.0028556302069546262,
+            "profitFactor": 0.6166057294113872,
+            "totalReturn": -0.26557360924678025
+          }
+        },
+        {
+          "cost_bps_round_trip": 25,
+          "all": {
+            "threshold": 90,
+            "trades": 144,
+            "winRate": 0.375,
+            "expectancy": -0.003942281354280483,
+            "profitFactor": 0.4871906503906194,
+            "totalReturn": -0.5676885150163896
+          },
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 93,
+            "winRate": 0.3978494623655914,
+            "expectancy": -0.0033556302069546267,
+            "profitFactor": 0.5667526072719303,
+            "totalReturn": -0.3120736092467803
+          }
+        }
+      ],
+      "perSymbol": [
+        {
+          "symbol": "BTCUSDT",
+          "threshold": 90,
+          "trades": 14,
+          "winRate": 0.21428571428571427,
+          "expectancy": -0.00712121407805474,
+          "profitFactor": 0.056336305672594456,
+          "totalReturn": -0.09969699709276636,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 9,
+            "winRate": 0.3333333333333333,
+            "expectancy": -0.005730337238231778,
+            "profitFactor": 0.10346591640421939,
+            "totalReturn": -0.051573035144086
+          }
+        },
+        {
+          "symbol": "ETHUSDT",
+          "threshold": 90,
+          "trades": 37,
+          "winRate": 0.32432432432432434,
+          "expectancy": -0.004269583367766822,
+          "profitFactor": 0.39755218657292585,
+          "totalReturn": -0.1579745846073724,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 27,
+            "winRate": 0.3333333333333333,
+            "expectancy": -0.003643198330797661,
+            "profitFactor": 0.48720770550328196,
+            "totalReturn": -0.09836635493153684
+          }
+        },
+        {
+          "symbol": "SOLUSDT",
+          "threshold": 90,
+          "trades": 45,
+          "winRate": 0.5111111111111111,
+          "expectancy": 0.00024015224626673147,
+          "profitFactor": 1.044487656920067,
+          "totalReturn": 0.010806851082002916,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 28,
+            "winRate": 0.5357142857142857,
+            "expectancy": 0.0011826021435152126,
+            "profitFactor": 1.2080563162700677,
+            "totalReturn": 0.03311286001842595
+          }
+        },
+        {
+          "symbol": "XRPUSDT",
+          "threshold": 90,
+          "trades": 48,
+          "winRate": 0.3958333333333333,
+          "expectancy": -0.003683828841630291,
+          "profitFactor": 0.5670725322688768,
+          "totalReturn": -0.17682378439825397,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 29,
+            "winRate": 0.41379310344827586,
+            "expectancy": -0.0035257613513649433,
+            "profitFactor": 0.6024413425005761,
+            "totalReturn": -0.10224707918958335
+          }
+        }
+      ]
+    },
+    {
+      "fold": 2,
+      "train": "2025-01-01..2026-01-01",
+      "test": "2026-01-01..2026-04-01",
+      "selectedThreshold": 90,
+      "trainBest": {
+        "threshold": 90,
+        "trades": 973,
+        "winRate": 0.45323741007194246,
+        "expectancy": -0.0003127006396078642,
+        "profitFactor": 0.955943231637321,
+        "totalReturn": -0.30425772233845183
+      },
+      "testStats": {
+        "threshold": 90,
+        "trades": 210,
+        "winRate": 0.48095238095238096,
+        "expectancy": -0.0014540636286001492,
+        "profitFactor": 0.8142448741150059,
+        "totalReturn": -0.3053533620060313
+      },
+      "testNonOverlapping": {
+        "threshold": 90,
+        "trades": 115,
+        "winRate": 0.3826086956521739,
+        "expectancy": -0.0029502043590786003,
+        "profitFactor": 0.6429442330056098,
+        "totalReturn": -0.33927350129403905
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1603,
+        "winRate": 0.42420461634435436,
+        "expectancy": -0.00138161406972211,
+        "profitFactor": 0.7612576952299923,
+        "totalReturn": -2.2147273537645424
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 734,
+        "winRate": 0.44959128065395093,
+        "expectancy": -0.0005590809195591315,
+        "profitFactor": 0.9085321921702212,
+        "totalReturn": -0.4103653949564025
+      },
+      "costSensitivity": [
+        {
+          "cost_bps_round_trip": 15,
+          "all": {
+            "threshold": 90,
+            "trades": 210,
+            "winRate": 0.48095238095238096,
+            "expectancy": -0.0014540636286001492,
+            "profitFactor": 0.8142448741150059,
+            "totalReturn": -0.3053533620060313
+          },
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 115,
+            "winRate": 0.3826086956521739,
+            "expectancy": -0.0029502043590786003,
+            "profitFactor": 0.6429442330056098,
+            "totalReturn": -0.33927350129403905
+          }
+        },
+        {
+          "cost_bps_round_trip": 20,
+          "all": {
+            "threshold": 90,
+            "trades": 210,
+            "winRate": 0.46190476190476193,
+            "expectancy": -0.0019540636286001496,
+            "profitFactor": 0.7585440189582371,
+            "totalReturn": -0.4103533620060314
+          },
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 115,
+            "winRate": 0.3565217391304348,
+            "expectancy": -0.0034502043590786007,
+            "profitFactor": 0.5978397604822885,
+            "totalReturn": -0.3967735012940391
+          }
+        },
+        {
+          "cost_bps_round_trip": 25,
+          "all": {
+            "threshold": 90,
+            "trades": 210,
+            "winRate": 0.45714285714285713,
+            "expectancy": -0.0024540636286001496,
+            "profitFactor": 0.7065203924409514,
+            "totalReturn": -0.5153533620060314
+          },
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 115,
+            "winRate": 0.34782608695652173,
+            "expectancy": -0.003950204359078601,
+            "profitFactor": 0.5562091760207883,
+            "totalReturn": -0.4542735012940391
+          }
+        }
+      ],
+      "perSymbol": [
+        {
+          "symbol": "BTCUSDT",
+          "threshold": 90,
+          "trades": 31,
+          "winRate": 0.41935483870967744,
+          "expectancy": -0.0010783077971864476,
+          "profitFactor": 0.7964682997872023,
+          "totalReturn": -0.033427541712779875,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 19,
+            "winRate": 0.3157894736842105,
+            "expectancy": -0.002250619936390959,
+            "profitFactor": 0.6747899629611331,
+            "totalReturn": -0.042761778791428215
+          }
+        },
+        {
+          "symbol": "ETHUSDT",
+          "threshold": 90,
+          "trades": 48,
+          "winRate": 0.4375,
+          "expectancy": -0.0010140772967347008,
+          "profitFactor": 0.8641844178763464,
+          "totalReturn": -0.04867571024326564,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 27,
+            "winRate": 0.2962962962962963,
+            "expectancy": -0.004197807081807324,
+            "profitFactor": 0.5268678569702477,
+            "totalReturn": -0.11334079120879775
+          }
+        },
+        {
+          "symbol": "SOLUSDT",
+          "threshold": 90,
+          "trades": 61,
+          "winRate": 0.4262295081967213,
+          "expectancy": -0.002805552490349922,
+          "profitFactor": 0.6503387899452698,
+          "totalReturn": -0.17113870191134523,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 35,
+            "winRate": 0.34285714285714286,
+            "expectancy": -0.0048386448828180995,
+            "profitFactor": 0.40913111870845836,
+            "totalReturn": -0.16935257089863348
+          }
+        },
+        {
+          "symbol": "XRPUSDT",
+          "threshold": 90,
+          "trades": 70,
+          "winRate": 0.5857142857142857,
+          "expectancy": -0.0007444486876948652,
+          "profitFactor": 0.917515781614032,
+          "totalReturn": -0.05211140813864057,
+          "nonOverlapping": {
+            "threshold": 90,
+            "trades": 34,
+            "winRate": 0.5294117647058824,
+            "expectancy": -0.0004064223645641051,
+            "profitFactor": 0.9527637860628845,
+            "totalReturn": -0.013818360395179575
+          }
+        }
+      ]
+    },
+    {
+      "fold": 3,
+      "train": "2025-04-01..2026-04-01",
+      "test": "2026-04-01..2026-07-01",
+      "selectedThreshold": 80,
+      "trainBest": {
+        "threshold": 80,
+        "trades": 3368,
+        "winRate": 0.43646080760095013,
+        "expectancy": -0.0010349382588653575,
+        "profitFactor": 0.8306349186316576,
+        "totalReturn": -3.485672055858524
+      },
+      "testStats": {
+        "threshold": 80,
+        "trades": 606,
+        "winRate": 0.3580858085808581,
+        "expectancy": -0.0018949156778017898,
+        "profitFactor": 0.661222276622045,
+        "totalReturn": -1.1483189007478847
+      },
+      "testNonOverlapping": {
+        "threshold": 80,
+        "trades": 268,
+        "winRate": 0.3694029850746269,
+        "expectancy": -0.0016371466372589447,
+        "profitFactor": 0.6924406893378522,
+        "totalReturn": -0.4387552987853972
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1556,
+        "winRate": 0.35989717223650386,
+        "expectancy": -0.0020937750078720173,
+        "profitFactor": 0.5973507367703279,
+        "totalReturn": -3.2579139122488585
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 606,
+        "winRate": 0.3580858085808581,
+        "expectancy": -0.0018949156778017898,
+        "profitFactor": 0.661222276622045,
+        "totalReturn": -1.1483189007478847
+      },
+      "costSensitivity": [
+        {
+          "cost_bps_round_trip": 15,
+          "all": {
+            "threshold": 80,
+            "trades": 606,
+            "winRate": 0.3580858085808581,
+            "expectancy": -0.0018949156778017898,
+            "profitFactor": 0.661222276622045,
+            "totalReturn": -1.1483189007478847
+          },
+          "nonOverlapping": {
+            "threshold": 80,
+            "trades": 268,
+            "winRate": 0.3694029850746269,
+            "expectancy": -0.0016371466372589447,
+            "profitFactor": 0.6924406893378522,
+            "totalReturn": -0.4387552987853972
+          }
+        },
+        {
+          "cost_bps_round_trip": 20,
+          "all": {
+            "threshold": 80,
+            "trades": 606,
+            "winRate": 0.3465346534653465,
+            "expectancy": -0.0023949156778017826,
+            "profitFactor": 0.5953346094864905,
+            "totalReturn": -1.4513189007478804
+          },
+          "nonOverlapping": {
+            "threshold": 80,
+            "trades": 268,
+            "winRate": 0.3582089552238806,
+            "expectancy": -0.002137146637258949,
+            "profitFactor": 0.6212526986141051,
+            "totalReturn": -0.5727552987853983
+          }
+        },
+        {
+          "cost_bps_round_trip": 25,
+          "all": {
+            "threshold": 80,
+            "trades": 606,
+            "winRate": 0.32673267326732675,
+            "expectancy": -0.0028949156778017744,
+            "profitFactor": 0.5368678962745483,
+            "totalReturn": -1.7543189007478752
+          },
+          "nonOverlapping": {
+            "threshold": 80,
+            "trades": 268,
+            "winRate": 0.34328358208955223,
+            "expectancy": -0.0026371466372589326,
+            "profitFactor": 0.5580761225336521,
+            "totalReturn": -0.7067552987853939
+          }
+        }
+      ],
+      "perSymbol": [
+        {
+          "symbol": "BTCUSDT",
+          "threshold": 80,
+          "trades": 128,
+          "winRate": 0.3046875,
+          "expectancy": -0.0016947273531561946,
+          "profitFactor": 0.577912148097732,
+          "totalReturn": -0.21692510120399291,
+          "nonOverlapping": {
+            "threshold": 80,
+            "trades": 61,
+            "winRate": 0.32786885245901637,
+            "expectancy": -0.0011707782120096027,
+            "profitFactor": 0.6948911928250417,
+            "totalReturn": -0.07141747093258577
+          }
+        },
+        {
+          "symbol": "ETHUSDT",
+          "threshold": 80,
+          "trades": 145,
+          "winRate": 0.32413793103448274,
+          "expectancy": -0.003111667580722019,
+          "profitFactor": 0.5165822195663173,
+          "totalReturn": -0.45119179920469277,
+          "nonOverlapping": {
+            "threshold": 80,
+            "trades": 64,
+            "winRate": 0.359375,
+            "expectancy": -0.0014277863369496831,
+            "profitFactor": 0.7324748000612235,
+            "totalReturn": -0.09137832556477972
+          }
+        },
+        {
+          "symbol": "SOLUSDT",
+          "threshold": 80,
+          "trades": 189,
+          "winRate": 0.3862433862433862,
+          "expectancy": -0.0016756871344674026,
+          "profitFactor": 0.704264814226153,
+          "totalReturn": -0.3167048684143391,
+          "nonOverlapping": {
+            "threshold": 80,
+            "trades": 83,
+            "winRate": 0.3614457831325301,
+            "expectancy": -0.0025090767613157577,
+            "profitFactor": 0.592709249866494,
+            "totalReturn": -0.2082533711892079
+          }
+        },
+        {
+          "symbol": "XRPUSDT",
+          "threshold": 80,
+          "trades": 144,
+          "winRate": 0.4027777777777778,
+          "expectancy": -0.0011353967494782099,
+          "profitFactor": 0.8123776752652344,
+          "totalReturn": -0.1634971319248622,
+          "nonOverlapping": {
+            "threshold": 80,
+            "trades": 60,
+            "winRate": 0.43333333333333335,
+            "expectancy": -0.0011284355183137451,
+            "profitFactor": 0.8006393884139089,
+            "totalReturn": -0.0677061310988247
+          }
+        }
+      ]
+    },
+    {
+      "fold": 4,
+      "train": "2025-07-01..2026-07-01",
+      "test": "2026-07-01..2026-10-01",
+      "selectedThreshold": 85,
+      "trainBest": {
+        "threshold": 85,
+        "trades": 1681,
+        "winRate": 0.41939321832242715,
+        "expectancy": -0.001145277818924134,
+        "profitFactor": 0.8164226880349914,
+        "totalReturn": -1.925212013611469
+      },
+      "testStats": {
+        "threshold": 85,
+        "trades": 454,
+        "winRate": 0.45594713656387664,
+        "expectancy": 0.0017541790826325866,
+        "profitFactor": 1.2860017858855772,
+        "totalReturn": 0.7963973035151943
+      },
+      "testNonOverlapping": {
+        "threshold": 85,
+        "trades": 205,
+        "winRate": 0.4634146341463415,
+        "expectancy": 0.001439964020953457,
+        "profitFactor": 1.245001937154558,
+        "totalReturn": 0.29519262429545867
+      },
+      "fixed70": {
+        "threshold": 70,
+        "trades": 1940,
+        "winRate": 0.4190721649484536,
+        "expectancy": 0.0003344845456532238,
+        "profitFactor": 1.070022643855847,
+        "totalReturn": 0.6489000185672542
+      },
+      "fixed80": {
+        "threshold": 80,
+        "trades": 820,
+        "winRate": 0.4402439024390244,
+        "expectancy": 0.0010275551427023858,
+        "profitFactor": 1.1851727095599889,
+        "totalReturn": 0.8425952170159563
+      },
+      "costSensitivity": [
+        {
+          "cost_bps_round_trip": 15,
+          "all": {
+            "threshold": 85,
+            "trades": 454,
+            "winRate": 0.45594713656387664,
+            "expectancy": 0.0017541790826325866,
+            "profitFactor": 1.2860017858855772,
+            "totalReturn": 0.7963973035151943
+          },
+          "nonOverlapping": {
+            "threshold": 85,
+            "trades": 205,
+            "winRate": 0.4634146341463415,
+            "expectancy": 0.001439964020953457,
+            "profitFactor": 1.245001937154558,
+            "totalReturn": 0.29519262429545867
+          }
+        },
+        {
+          "cost_bps_round_trip": 20,
+          "all": {
+            "threshold": 85,
+            "trades": 454,
+            "winRate": 0.44713656387665196,
+            "expectancy": 0.0012541790826325837,
+            "profitFactor": 1.1957398785943132,
+            "totalReturn": 0.569397303515193
+          },
+          "nonOverlapping": {
+            "threshold": 85,
+            "trades": 205,
+            "winRate": 0.4585365853658537,
+            "expectancy": 0.0009399640209534563,
+            "profitFactor": 1.1529439690592815,
+            "totalReturn": 0.19269262429545853
+          }
+        },
+        {
+          "cost_bps_round_trip": 25,
+          "all": {
+            "threshold": 85,
+            "trades": 454,
+            "winRate": 0.42731277533039647,
+            "expectancy": 0.0007541790826325878,
+            "profitFactor": 1.1127543160171698,
+            "totalReturn": 0.3423973035151949
+          },
+          "nonOverlapping": {
+            "threshold": 85,
+            "trades": 205,
+            "winRate": 0.44390243902439025,
+            "expectancy": 0.0004399640209534563,
+            "profitFactor": 1.0685253781713104,
+            "totalReturn": 0.09019262429545855
+          }
+        }
+      ],
+      "perSymbol": [
+        {
+          "symbol": "BTCUSDT",
+          "threshold": 85,
+          "trades": 64,
+          "winRate": 0.515625,
+          "expectancy": 0.0011156995064986245,
+          "profitFactor": 1.368511143839208,
+          "totalReturn": 0.07140476841591196,
+          "nonOverlapping": {
+            "threshold": 85,
+            "trades": 32,
+            "winRate": 0.5625,
+            "expectancy": 0.0020718611454658563,
+            "profitFactor": 1.7741274871456558,
+            "totalReturn": 0.0662995566549074
+          }
+        },
+        {
+          "symbol": "ETHUSDT",
+          "threshold": 85,
+          "trades": 107,
+          "winRate": 0.32710280373831774,
+          "expectancy": 0.0010719824239574572,
+          "profitFactor": 1.1906109679147796,
+          "totalReturn": 0.11470211936344793,
+          "nonOverlapping": {
+            "threshold": 85,
+            "trades": 52,
+            "winRate": 0.3076923076923077,
+            "expectancy": -0.0010553526504407551,
+            "profitFactor": 0.838004217013516,
+            "totalReturn": -0.05487833782291927
+          }
+        },
+        {
+          "symbol": "SOLUSDT",
+          "threshold": 85,
+          "trades": 135,
+          "winRate": 0.4666666666666667,
+          "expectancy": 0.0011848010807304554,
+          "profitFactor": 1.2067971511246085,
+          "totalReturn": 0.15994814589861148,
+          "nonOverlapping": {
+            "threshold": 85,
+            "trades": 62,
+            "winRate": 0.4838709677419355,
+            "expectancy": 0.0014947635529875337,
+            "profitFactor": 1.2776219611229125,
+            "totalReturn": 0.09267534028522709
+          }
+        },
+        {
+          "symbol": "XRPUSDT",
+          "threshold": 85,
+          "trades": 148,
+          "winRate": 0.5135135135135135,
+          "expectancy": 0.0030428531745758367,
+          "profitFactor": 1.3704665738935566,
+          "totalReturn": 0.4503422698372238,
+          "nonOverlapping": {
+            "threshold": 85,
+            "trades": 59,
+            "winRate": 0.5254237288135594,
+            "expectancy": 0.003238916358953279,
+            "profitFactor": 1.427860577688458,
+            "totalReturn": 0.19109606517824346
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "folds": 4,
+    "selectedThresholds": [
+      90,
+      90,
+      80,
+      85
+    ],
+    "oosNonOverlappingExpectancies": [
+      -0.0023556302069546262,
+      -0.0029502043590786003,
+      -0.0016371466372589447,
+      0.001439964020953457
+    ],
+    "positiveOosFolds": 1
+  }
+}

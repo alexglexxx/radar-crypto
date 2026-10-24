@@ -1,0 +1,844 @@
+{
+  "reportName": "radar-crypto-donchian-breakout-1h",
+  "generatedAt": "2026-10-13T05:27:33.033Z",
+  "productionUntouched": true,
+  "notDeployable": true,
+  "methodology": {
+    "interval": "1h",
+    "signals": "Long-only close breakout above prior N-bar high; enter at next candle open. Exit when close falls below prior M-bar low; exit next candle open.",
+    "configurations": [
+      {
+        "name": "donchian_20_10",
+        "entry": 20,
+        "exit": 10
+      },
+      {
+        "name": "donchian_55_20",
+        "entry": 55,
+        "exit": 20
+      }
+    ],
+    "costsBpsRoundTrip": [
+      15,
+      20,
+      25
+    ],
+    "costsInclude": "Combined fee and slippage assumption; sensitivity at 15, 20, and 25 bps per round trip.",
+    "folds": "Four fixed chronological OOS quarters; positions still open at period end are marked to the final in-window close and explicitly counted. Channel values exclude current candle. No parameter selection on OOS. Pooled sum of trade returns is not portfolio return; capital-weighted portfolio equity/drawdown are intentionally not claimed in this report.",
+    "risk": "Spot long-only proxy; ignores partial fills, spread variation, latency, exchange outages, taxes, and market impact. No leverage. Research only."
+  },
+  "coverage": [
+    {
+      "symbol": "BTCUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    },
+    {
+      "symbol": "ETHUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    },
+    {
+      "symbol": "SOLUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    },
+    {
+      "symbol": "XRPUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0,
+      "duplicateTimesRemoved": 0
+    }
+  ],
+  "strategies": [
+    {
+      "name": "donchian_20_10",
+      "entry": 20,
+      "exit": 10,
+      "folds": [
+        {
+          "fold": 1,
+          "train": "2024-10-01..2025-10-01",
+          "test": "2025-10-01..2026-01-01",
+          "testStats": {
+            "trades": 145,
+            "winRate": 0.2413793103448276,
+            "expectancy": -0.008697952984476844,
+            "profitFactor": 0.4538898449158022,
+            "sumOfTradeReturns_notPortfolioReturn": -1.2612031827491423,
+            "periodEndMarkedTrades": 1,
+            "averageBarsHeld": 20.46896551724138
+          },
+          "openPositionsMarkedAtPeriodEnd": 1,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 37,
+              "winRate": 0.24324324324324326,
+              "expectancy": -0.007561215071890504,
+              "profitFactor": 0.3724085469784653,
+              "sumOfTradeReturns_notPortfolioReturn": -0.27976495765994863,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 18.89189189189189,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 36,
+              "winRate": 0.2777777777777778,
+              "expectancy": -0.007169611056564194,
+              "profitFactor": 0.5366193393916568,
+              "sumOfTradeReturns_notPortfolioReturn": -0.25810599803631096,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 21.52777777777778,
+              "openPositionsMarkedAtPeriodEnd": 1
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 37,
+              "winRate": 0.1891891891891892,
+              "expectancy": -0.013344091552032127,
+              "profitFactor": 0.310948114134515,
+              "sumOfTradeReturns_notPortfolioReturn": -0.4937313874251887,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 19.54054054054054,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 35,
+              "winRate": 0.2571428571428571,
+              "expectancy": -0.006560023989362692,
+              "profitFactor": 0.6109190288087586,
+              "sumOfTradeReturns_notPortfolioReturn": -0.22960083962769423,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 22.02857142857143,
+              "openPositionsMarkedAtPeriodEnd": 0
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 145,
+              "winRate": 0.2413793103448276,
+              "expectancy": -0.008697952984476844,
+              "profitFactor": 0.4538898449158022,
+              "sumOfTradeReturns_notPortfolioReturn": -1.2612031827491423,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 20.46896551724138
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 145,
+              "winRate": 0.23448275862068965,
+              "expectancy": -0.009197952984476837,
+              "profitFactor": 0.43596804440996684,
+              "sumOfTradeReturns_notPortfolioReturn": -1.3337031827491415,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 20.46896551724138
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 145,
+              "winRate": 0.23448275862068965,
+              "expectancy": -0.009697952984476827,
+              "profitFactor": 0.4189454291999362,
+              "sumOfTradeReturns_notPortfolioReturn": -1.40620318274914,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 20.46896551724138
+            }
+          ]
+        },
+        {
+          "fold": 2,
+          "train": "2025-01-01..2026-01-01",
+          "test": "2026-01-01..2026-04-01",
+          "testStats": {
+            "trades": 103,
+            "winRate": 0.33980582524271846,
+            "expectancy": 0.0012870661379199874,
+            "profitFactor": 1.1127028013400435,
+            "sumOfTradeReturns_notPortfolioReturn": 0.1325678122057587,
+            "periodEndMarkedTrades": 0,
+            "averageBarsHeld": 25.87378640776699
+          },
+          "openPositionsMarkedAtPeriodEnd": 0,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 26,
+              "winRate": 0.38461538461538464,
+              "expectancy": -0.0012400947116030362,
+              "profitFactor": 0.877308466614231,
+              "sumOfTradeReturns_notPortfolioReturn": -0.03224246250167894,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 25.653846153846153,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 24,
+              "winRate": 0.3333333333333333,
+              "expectancy": 0.0015367331243045141,
+              "profitFactor": 1.1300020544579408,
+              "sumOfTradeReturns_notPortfolioReturn": 0.03688159498330834,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 26.291666666666668,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 27,
+              "winRate": 0.3333333333333333,
+              "expectancy": 0.0024060403683399596,
+              "profitFactor": 1.2266109122383213,
+              "sumOfTradeReturns_notPortfolioReturn": 0.06496308994517891,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 25.666666666666668,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 26,
+              "winRate": 0.3076923076923077,
+              "expectancy": 0.0024217534530365536,
+              "profitFactor": 1.18352244127534,
+              "sumOfTradeReturns_notPortfolioReturn": 0.06296558977895039,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 25.923076923076923,
+              "openPositionsMarkedAtPeriodEnd": 0
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "expectancy": 0.0012870661379199874,
+              "profitFactor": 1.1127028013400435,
+              "sumOfTradeReturns_notPortfolioReturn": 0.1325678122057587,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 25.87378640776699
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "expectancy": 0.0007870661379199868,
+              "profitFactor": 1.0669837912765197,
+              "sumOfTradeReturns_notPortfolioReturn": 0.08106781220575865,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 25.87378640776699
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "expectancy": 0.00028706613791998743,
+              "profitFactor": 1.0237633686059242,
+              "sumOfTradeReturns_notPortfolioReturn": 0.029567812205758704,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 25.87378640776699
+            }
+          ]
+        },
+        {
+          "fold": 3,
+          "train": "2025-04-01..2026-04-01",
+          "test": "2026-04-01..2026-07-01",
+          "testStats": {
+            "trades": 117,
+            "winRate": 0.358974358974359,
+            "expectancy": -0.0023205528877307488,
+            "profitFactor": 0.7425840816543152,
+            "sumOfTradeReturns_notPortfolioReturn": -0.2715046878644976,
+            "periodEndMarkedTrades": 0,
+            "averageBarsHeld": 26.495726495726494
+          },
+          "openPositionsMarkedAtPeriodEnd": 0,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 28,
+              "winRate": 0.32142857142857145,
+              "expectancy": -0.0021987801564130878,
+              "profitFactor": 0.6718671372757811,
+              "sumOfTradeReturns_notPortfolioReturn": -0.061565844379566456,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 27.892857142857142,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 30,
+              "winRate": 0.3,
+              "expectancy": -0.003557769327249508,
+              "profitFactor": 0.6279837475260287,
+              "sumOfTradeReturns_notPortfolioReturn": -0.10673307981748524,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 23.333333333333332,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 29,
+              "winRate": 0.4482758620689655,
+              "expectancy": 0.0012065857320910903,
+              "profitFactor": 1.1446602179321208,
+              "sumOfTradeReturns_notPortfolioReturn": 0.03499098623064162,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 29.896551724137932,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 30,
+              "winRate": 0.36666666666666664,
+              "expectancy": -0.00460655832993625,
+              "profitFactor": 0.5915187788722818,
+              "sumOfTradeReturns_notPortfolioReturn": -0.1381967498980875,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 25.066666666666666,
+              "openPositionsMarkedAtPeriodEnd": 0
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 117,
+              "winRate": 0.358974358974359,
+              "expectancy": -0.0023205528877307488,
+              "profitFactor": 0.7425840816543152,
+              "sumOfTradeReturns_notPortfolioReturn": -0.2715046878644976,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 26.495726495726494
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 117,
+              "winRate": 0.3504273504273504,
+              "expectancy": -0.002820552887730749,
+              "profitFactor": 0.6979344228980303,
+              "sumOfTradeReturns_notPortfolioReturn": -0.33000468786449766,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 26.495726495726494
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 117,
+              "winRate": 0.3504273504273504,
+              "expectancy": -0.003320552887730749,
+              "profitFactor": 0.656340634940569,
+              "sumOfTradeReturns_notPortfolioReturn": -0.38850468786449766,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 26.495726495726494
+            }
+          ]
+        },
+        {
+          "fold": 4,
+          "train": "2025-07-01..2026-07-01",
+          "test": "2026-07-01..2026-10-01",
+          "testStats": {
+            "trades": 115,
+            "winRate": 0.3826086956521739,
+            "expectancy": 0.01255208555547308,
+            "profitFactor": 2.545452299136332,
+            "sumOfTradeReturns_notPortfolioReturn": 1.4434898388794042,
+            "periodEndMarkedTrades": 2,
+            "averageBarsHeld": 32.18260869565217
+          },
+          "openPositionsMarkedAtPeriodEnd": 2,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 32,
+              "winRate": 0.4375,
+              "expectancy": 0.006901741164058273,
+              "profitFactor": 2.1793473633258684,
+              "sumOfTradeReturns_notPortfolioReturn": 0.22085571724986475,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 32.09375,
+              "openPositionsMarkedAtPeriodEnd": 1
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 27,
+              "winRate": 0.37037037037037035,
+              "expectancy": 0.011852209951447841,
+              "profitFactor": 2.5529345507723535,
+              "sumOfTradeReturns_notPortfolioReturn": 0.3200096686890917,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 33.888888888888886,
+              "openPositionsMarkedAtPeriodEnd": 1
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 28,
+              "winRate": 0.39285714285714285,
+              "expectancy": 0.013066537684482543,
+              "profitFactor": 2.2841687293209643,
+              "sumOfTradeReturns_notPortfolioReturn": 0.3658630551655112,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 31.892857142857142,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 28,
+              "winRate": 0.32142857142857145,
+              "expectancy": 0.01917004992053341,
+              "profitFactor": 3.0984914473269614,
+              "sumOfTradeReturns_notPortfolioReturn": 0.5367613977749355,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 30.928571428571427,
+              "openPositionsMarkedAtPeriodEnd": 0
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 115,
+              "winRate": 0.3826086956521739,
+              "expectancy": 0.01255208555547308,
+              "profitFactor": 2.545452299136332,
+              "sumOfTradeReturns_notPortfolioReturn": 1.4434898388794042,
+              "periodEndMarkedTrades": 2,
+              "averageBarsHeld": 32.18260869565217
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 115,
+              "winRate": 0.3826086956521739,
+              "expectancy": 0.012052085555473071,
+              "profitFactor": 2.4295567317500435,
+              "sumOfTradeReturns_notPortfolioReturn": 1.3859898388794032,
+              "periodEndMarkedTrades": 2,
+              "averageBarsHeld": 32.18260869565217
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 115,
+              "winRate": 0.3826086956521739,
+              "expectancy": 0.011552085555473086,
+              "profitFactor": 2.321848614307001,
+              "sumOfTradeReturns_notPortfolioReturn": 1.3284898388794049,
+              "periodEndMarkedTrades": 2,
+              "averageBarsHeld": 32.18260869565217
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "positiveOosFolds": 2,
+        "folds": 4,
+        "oosExpectancies": [
+          -0.008697952984476844,
+          0.0012870661379199874,
+          -0.0023205528877307488,
+          0.01255208555547308
+        ],
+        "totalTrades": 480,
+        "note": "Fixed, predeclared parameters; no threshold optimization. Per-symbol stats are reported to expose concentration risk."
+      }
+    },
+    {
+      "name": "donchian_55_20",
+      "entry": 55,
+      "exit": 20,
+      "folds": [
+        {
+          "fold": 1,
+          "train": "2024-10-01..2025-10-01",
+          "test": "2025-10-01..2026-01-01",
+          "testStats": {
+            "trades": 53,
+            "winRate": 0.32075471698113206,
+            "expectancy": -0.012078496843850477,
+            "profitFactor": 0.4098618603877011,
+            "sumOfTradeReturns_notPortfolioReturn": -0.6401603327240752,
+            "periodEndMarkedTrades": 1,
+            "averageBarsHeld": 44.15094339622642
+          },
+          "openPositionsMarkedAtPeriodEnd": 1,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 13,
+              "winRate": 0.3076923076923077,
+              "expectancy": -0.005173831975368483,
+              "profitFactor": 0.571131710673313,
+              "sumOfTradeReturns_notPortfolioReturn": -0.06725981567979028,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 48,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 12,
+              "winRate": 0.5833333333333334,
+              "expectancy": -0.0009251028027759306,
+              "profitFactor": 0.9312323847521002,
+              "sumOfTradeReturns_notPortfolioReturn": -0.011101233633311168,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 51.416666666666664,
+              "openPositionsMarkedAtPeriodEnd": 1
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 16,
+              "winRate": 0.0625,
+              "expectancy": -0.030148656992073017,
+              "profitFactor": 0.0866830780081996,
+              "sumOfTradeReturns_notPortfolioReturn": -0.48237851187316827,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 38.8125,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 12,
+              "winRate": 0.4166666666666667,
+              "expectancy": -0.006618397628150484,
+              "profitFactor": 0.6667757651447509,
+              "sumOfTradeReturns_notPortfolioReturn": -0.0794207715378058,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 39.833333333333336,
+              "openPositionsMarkedAtPeriodEnd": 0
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 53,
+              "winRate": 0.32075471698113206,
+              "expectancy": -0.012078496843850477,
+              "profitFactor": 0.4098618603877011,
+              "sumOfTradeReturns_notPortfolioReturn": -0.6401603327240752,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 44.15094339622642
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 53,
+              "winRate": 0.3018867924528302,
+              "expectancy": -0.012578496843850482,
+              "profitFactor": 0.39566038666860825,
+              "sumOfTradeReturns_notPortfolioReturn": -0.6666603327240755,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 44.15094339622642
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 53,
+              "winRate": 0.3018867924528302,
+              "expectancy": -0.013078496843850469,
+              "profitFactor": 0.3820018484693025,
+              "sumOfTradeReturns_notPortfolioReturn": -0.6931603327240748,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 44.15094339622642
+            }
+          ]
+        },
+        {
+          "fold": 2,
+          "train": "2025-01-01..2026-01-01",
+          "test": "2026-01-01..2026-04-01",
+          "testStats": {
+            "trades": 45,
+            "winRate": 0.35555555555555557,
+            "expectancy": -0.000018301305175935954,
+            "profitFactor": 0.9986416412623036,
+            "sumOfTradeReturns_notPortfolioReturn": -0.0008235587329171179,
+            "periodEndMarkedTrades": 1,
+            "averageBarsHeld": 47.55555555555556
+          },
+          "openPositionsMarkedAtPeriodEnd": 1,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 12,
+              "winRate": 0.3333333333333333,
+              "expectancy": -0.000979116101423519,
+              "profitFactor": 0.8901760011787402,
+              "sumOfTradeReturns_notPortfolioReturn": -0.01174939321708223,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 48.166666666666664,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 11,
+              "winRate": 0.5454545454545454,
+              "expectancy": 0.00899957665327456,
+              "profitFactor": 1.8181282289783556,
+              "sumOfTradeReturns_notPortfolioReturn": 0.09899534318602016,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 53.18181818181818,
+              "openPositionsMarkedAtPeriodEnd": 1
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 12,
+              "winRate": 0.25,
+              "expectancy": -0.00835144779054007,
+              "profitFactor": 0.4381958272868555,
+              "sumOfTradeReturns_notPortfolioReturn": -0.10021737348648085,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 43.5,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 10,
+              "winRate": 0.3,
+              "expectancy": 0.0012147864784625817,
+              "profitFactor": 1.060764052608091,
+              "sumOfTradeReturns_notPortfolioReturn": 0.012147864784625817,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 45.5,
+              "openPositionsMarkedAtPeriodEnd": 0
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 45,
+              "winRate": 0.35555555555555557,
+              "expectancy": -0.000018301305175935954,
+              "profitFactor": 0.9986416412623036,
+              "sumOfTradeReturns_notPortfolioReturn": -0.0008235587329171179,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 47.55555555555556
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 45,
+              "winRate": 0.35555555555555557,
+              "expectancy": -0.0005183013051759364,
+              "profitFactor": 0.96242920319992,
+              "sumOfTradeReturns_notPortfolioReturn": -0.023323558732917138,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 47.55555555555556
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 45,
+              "winRate": 0.35555555555555557,
+              "expectancy": -0.0010183013051759358,
+              "profitFactor": 0.9278698077120029,
+              "sumOfTradeReturns_notPortfolioReturn": -0.04582355873291711,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 47.55555555555556
+            }
+          ]
+        },
+        {
+          "fold": 3,
+          "train": "2025-04-01..2026-04-01",
+          "test": "2026-04-01..2026-07-01",
+          "testStats": {
+            "trades": 62,
+            "winRate": 0.22580645161290322,
+            "expectancy": -0.013100047993103122,
+            "profitFactor": 0.24214951462501488,
+            "sumOfTradeReturns_notPortfolioReturn": -0.8122029755723936,
+            "periodEndMarkedTrades": 0,
+            "averageBarsHeld": 38.064516129032256
+          },
+          "openPositionsMarkedAtPeriodEnd": 0,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 17,
+              "winRate": 0.17647058823529413,
+              "expectancy": -0.011351086467751955,
+              "profitFactor": 0.11528806854374582,
+              "sumOfTradeReturns_notPortfolioReturn": -0.19296846995178324,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 42.294117647058826,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 15,
+              "winRate": 0.2,
+              "expectancy": -0.01689100891568485,
+              "profitFactor": 0.08183841225125615,
+              "sumOfTradeReturns_notPortfolioReturn": -0.25336513373527275,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 36.266666666666666,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 16,
+              "winRate": 0.25,
+              "expectancy": -0.012223036037564486,
+              "profitFactor": 0.4122255958368203,
+              "sumOfTradeReturns_notPortfolioReturn": -0.19556857660103177,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 40.8125,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 14,
+              "winRate": 0.2857142857142857,
+              "expectancy": -0.01216434252030756,
+              "profitFactor": 0.30469387503531464,
+              "sumOfTradeReturns_notPortfolioReturn": -0.17030079528430586,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 31.714285714285715,
+              "openPositionsMarkedAtPeriodEnd": 0
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 62,
+              "winRate": 0.22580645161290322,
+              "expectancy": -0.013100047993103122,
+              "profitFactor": 0.24214951462501488,
+              "sumOfTradeReturns_notPortfolioReturn": -0.8122029755723936,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 38.064516129032256
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 62,
+              "winRate": 0.20967741935483872,
+              "expectancy": -0.013600047993103123,
+              "profitFactor": 0.23058906411159585,
+              "sumOfTradeReturns_notPortfolioReturn": -0.8432029755723937,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 38.064516129032256
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 62,
+              "winRate": 0.20967741935483872,
+              "expectancy": -0.014100047993103106,
+              "profitFactor": 0.219745299277587,
+              "sumOfTradeReturns_notPortfolioReturn": -0.8742029755723926,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 38.064516129032256
+            }
+          ]
+        },
+        {
+          "fold": 4,
+          "train": "2025-07-01..2026-07-01",
+          "test": "2026-07-01..2026-10-01",
+          "testStats": {
+            "trades": 60,
+            "winRate": 0.38333333333333336,
+            "expectancy": 0.015178708197970008,
+            "profitFactor": 2.1521694928677895,
+            "sumOfTradeReturns_notPortfolioReturn": 0.9107224918782004,
+            "periodEndMarkedTrades": 2,
+            "averageBarsHeld": 50.166666666666664
+          },
+          "openPositionsMarkedAtPeriodEnd": 2,
+          "perSymbol": [
+            {
+              "symbol": "BTCUSDT",
+              "trades": 17,
+              "winRate": 0.35294117647058826,
+              "expectancy": 0.006628992576044497,
+              "profitFactor": 1.6071040752910142,
+              "sumOfTradeReturns_notPortfolioReturn": 0.11269287379275644,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 47.8235294117647,
+              "openPositionsMarkedAtPeriodEnd": 1
+            },
+            {
+              "symbol": "ETHUSDT",
+              "trades": 16,
+              "winRate": 0.4375,
+              "expectancy": 0.007179100765965299,
+              "profitFactor": 1.4941249584221266,
+              "sumOfTradeReturns_notPortfolioReturn": 0.11486561225544478,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 47.5,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "SOLUSDT",
+              "trades": 16,
+              "winRate": 0.3125,
+              "expectancy": 0.016652813302083562,
+              "profitFactor": 2.120453664728853,
+              "sumOfTradeReturns_notPortfolioReturn": 0.266445012833337,
+              "periodEndMarkedTrades": 0,
+              "averageBarsHeld": 54.5625,
+              "openPositionsMarkedAtPeriodEnd": 0
+            },
+            {
+              "symbol": "XRPUSDT",
+              "trades": 11,
+              "winRate": 0.45454545454545453,
+              "expectancy": 0.03788354481787838,
+              "profitFactor": 4.097037155645988,
+              "sumOfTradeReturns_notPortfolioReturn": 0.4167189929966622,
+              "periodEndMarkedTrades": 1,
+              "averageBarsHeld": 51.27272727272727,
+              "openPositionsMarkedAtPeriodEnd": 1
+            }
+          ],
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "trades": 60,
+              "winRate": 0.38333333333333336,
+              "expectancy": 0.015178708197970008,
+              "profitFactor": 2.1521694928677895,
+              "sumOfTradeReturns_notPortfolioReturn": 0.9107224918782004,
+              "periodEndMarkedTrades": 2,
+              "averageBarsHeld": 50.166666666666664
+            },
+            {
+              "roundTripCostBps": 20,
+              "trades": 60,
+              "winRate": 0.38333333333333336,
+              "expectancy": 0.014678708197970007,
+              "profitFactor": 2.0887345713181946,
+              "sumOfTradeReturns_notPortfolioReturn": 0.8807224918782004,
+              "periodEndMarkedTrades": 2,
+              "averageBarsHeld": 50.166666666666664
+            },
+            {
+              "roundTripCostBps": 25,
+              "trades": 60,
+              "winRate": 0.36666666666666664,
+              "expectancy": 0.01417870819797001,
+              "profitFactor": 2.027655872724363,
+              "sumOfTradeReturns_notPortfolioReturn": 0.8507224918782006,
+              "periodEndMarkedTrades": 2,
+              "averageBarsHeld": 50.166666666666664
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "positiveOosFolds": 1,
+        "folds": 4,
+        "oosExpectancies": [
+          -0.012078496843850477,
+          -0.000018301305175935954,
+          -0.013100047993103122,
+          0.015178708197970008
+        ],
+        "totalTrades": 220,
+        "note": "Fixed, predeclared parameters; no threshold optimization. Per-symbol stats are reported to expose concentration risk."
+      }
+    }
+  ]
+}
