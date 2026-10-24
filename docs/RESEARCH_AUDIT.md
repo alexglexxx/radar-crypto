@@ -67,7 +67,14 @@ Además, las vistas públicas tienen todos los grants por defecto de Supabase (I
 
 Controles de mutación: quitar el bloque heredado y el guard hace fallar las pruebas 2, 5 y 6; conservar los grants de escritura de la vista hace fallar al menos 2 y 3 (el guard aborta la migración). Límites: PGlite no es PostgREST ni la plataforma Supabase (no prueba códigos HTTP, JWT ni `pg_graphql`) y usa Postgres 18 frente a 17.6 en producción.
 
-**Aplicación propuesta (requiere autorización).** 1) Ejecutar el SQL de la migración en producción como una sola transacción. 2) `node scripts/audit-public-access.mjs --expect-locked` debe salir con código 0. 3) Abrir `radar-crypto.vercel.app`: "4/4 activos al día" e historial visible. 4) Esperar una ejecución del cron (HTTP 200) y comprobar outcomes pendientes = 0. Si el dashboard falla, aplicar el rollback y repetir los pasos 2 y 3.
+**Aplicada en producción el 2026-10-24 ~00:38 UTC**, con autorización de Alex, que la ejecutó en el SQL Editor de Supabase. Por eso no aparece en `supabase_migrations.schema_migrations`. Verificación:
+- Catálogo: solo quedan las políticas de noticias; `current_signals_public` tiene `security_invoker=false, security_barrier=true`. `anon` conserva únicamente SELECT sobre `current_signals_public`, las dos vistas de noticias, `news_briefings` y `news_items`. `signals` (888 filas) y `radar_public_metrics` (148) siguen intactas.
+- `audit-public-access.mjs --expect-locked`: código 0. Los 8 objetos privados responden 401 y la vista muestra las 4 monedas.
+- Dashboard revisado por Alex: "4/4 activos al día" y un historial distinto por moneda.
+- El cron de las 00:45 escribió las señales de los 4 activos con `service_role`; 0 outcomes pendientes.
+- Los logs de Vercel no devolvieron registros (403 por MCP y 0 por CLI), así que el código HTTP del cron no quedó confirmado por esa vía.
+
+**Procedimiento seguido.** 1) Ejecutar el SQL de la migración en producción como una sola transacción. 2) `node scripts/audit-public-access.mjs --expect-locked` debe salir con código 0. 3) Abrir `radar-crypto.vercel.app`: "4/4 activos al día" e historial visible. 4) Esperar una ejecución del cron (HTTP 200) y comprobar outcomes pendientes = 0. Si el dashboard falla, aplicar el rollback y repetir los pasos 2 y 3.
 
 ## Validación local
 
