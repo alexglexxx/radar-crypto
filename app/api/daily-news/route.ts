@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recordJobRun } from '../../../lib/job-runs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -145,11 +146,16 @@ async function analyze(candidates: Candidate[]) {
 
 export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+  const startedAt = Date.now()
+  let supabase: ReturnType<typeof admin> | null = null
   try {
     const today = new Date().toISOString().slice(0, 10)
-    const supabase = admin()
+    supabase = admin()
     const existing = await supabase.from('news_briefings').select('id,briefing_date,item_count,generated_at').eq('briefing_date', today).maybeSingle()
-    if (existing.data) return NextResponse.json({ ok: true, reused: true, briefing: existing.data })
+    if (existing.data) {
+      await recordJobRun(supabase, { job: 'daily-news', startedAt, httpStatus: 200 })
+      return NextResponse.json({ ok: true, reused: true, briefing: existing.data })
+    }
 
     const candidates = await collectNews()
     if (!candidates.length) throw new Error('No relevant crypto news found for BTC/ETH/SOL/XRP')
@@ -164,9 +170,12 @@ export async function GET(request: NextRequest) {
     })
     const { error: itemError } = await supabase.from('news_items').insert(rows)
     if (itemError) throw new Error(itemError.message)
+    await recordJobRun(supabase, { job: 'daily-news', startedAt, httpStatus: 200 })
     return NextResponse.json({ ok: true, briefing: { ...briefing, item_count: rows.length }, candidates: candidates.length, model })
   } catch (error) {
     console.error('[daily-news]', error)
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    if (supabase) await recordJobRun(supabase, { job: 'daily-news', startedAt, httpStatus: 500, errors: [{ error: message }] })
+    return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

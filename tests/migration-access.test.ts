@@ -74,6 +74,10 @@ function sql(file: string) {
   return readFileSync(file, 'utf8')
 }
 
+function migrationFiles() {
+  return readdirSync(MIGRATIONS).filter(name => name.endsWith('.sql')).sort()
+}
+
 // Booting PGlite is CPU-heavy; build the replica once and clone it per test.
 let replica: Promise<PGlite> | undefined
 
@@ -81,8 +85,8 @@ function buildReplica() {
   replica ??= (async () => {
     const db = new PGlite()
     await db.exec(SUPABASE_BOOTSTRAP)
-    for (const file of readdirSync(MIGRATIONS).filter(name => name.endsWith('.sql')).sort()) {
-      if (file === LOCKDOWN) continue
+    // Migrations after the lockdown run after it, in currentReplica().
+    for (const file of migrationFiles().filter(name => name < LOCKDOWN)) {
       await db.exec(sql(join(MIGRATIONS, file)))
     }
     await db.exec(PRODUCTION_DRIFT)
@@ -95,6 +99,15 @@ function buildReplica() {
 async function productionReplica({ lockdown }: { lockdown: boolean }) {
   const db = await (await buildReplica()).clone()
   if (lockdown) await db.exec(sql(join(MIGRATIONS, LOCKDOWN)))
+  return db
+}
+
+// Production today: the lockdown plus every later migration, in order.
+async function currentReplica() {
+  const db = await productionReplica({ lockdown: true })
+  for (const file of migrationFiles().filter(name => name > LOCKDOWN)) {
+    await db.exec(sql(join(MIGRATIONS, file)))
+  }
   return db
 }
 
@@ -205,6 +218,57 @@ describe('lock down research access migration', () => {
     await expect(asRole(db, 'anon', 'select 1 from public.signals')).rejects.toThrow(/permission denied/)
     await expect(asRole(db, 'anon', `insert into public.signals (symbol) values ('ANON')`)).rejects.toThrow(/permission denied/)
     await db.exec(sql(join(MIGRATIONS, LOCKDOWN)))
+    await expect(asRole(db, 'anon', 'select symbol from public.radar_signals')).rejects.toThrow(/permission denied/)
+    await db.close()
+  }, 60000)
+})
+
+const JOB_HEALTH = '20261024120000_job_runs_health.sql'
+const JOB_HEALTH_ROLLBACK = 'supabase/rollback/20261024120000_job_runs_health.down.sql'
+const JOB_HEALTH_COLUMNS = ['job', 'last_run_at', 'last_status', 'last_ok', 'assets_ok', 'assets_total',
+  'last_ok_at', 'failures_24h']
+
+describe('job health migration', () => {
+  it('keeps run details private and exposes only the bounded health view', async () => {
+    const db = await currentReplica()
+    await db.exec('set role service_role')
+    await db.exec(`
+      insert into public.job_runs (job, started_at, finished_at, http_status, ok, assets_ok, assets_total, errors) values
+        ('ingest', now() - interval '31 minutes', now() - interval '30 minutes', 200, true, 4, 4, '[]'),
+        ('ingest', now() - interval '16 minutes', now() - interval '15 minutes', 503, false, 3, 4,
+          '[{"symbol":"SOLUSDT","error":"internal detail"}]'),
+        ('ingest', now() - interval '2 days', now() - interval '2 days', 500, false, null, null, '[]'),
+        ('daily-news', now() - interval '3 hours', now() - interval '3 hours', 500, false, null, null,
+          '[{"error":"Missing OPENAI_API_KEY"}]');
+    `)
+    await db.exec('reset role')
+    for (const role of PUBLIC_ROLES) {
+      await expect(asRole(db, role, 'select 1 from public.job_runs')).rejects.toThrow(/permission denied/)
+      await expect(asRole(db, role, `insert into public.job_runs (job, started_at, http_status, ok)
+        values ('ingest', now(), 200, true)`)).rejects.toThrow(/permission denied/)
+      await expect(asRole(db, role, 'delete from public.job_health_public')).rejects.toThrow(/permission denied|cannot delete/)
+      const rows = await asRole<Record<string, unknown>>(db, role, 'select * from public.job_health_public order by job')
+      expect(rows.map(row => Object.keys(row))).toEqual([JOB_HEALTH_COLUMNS, JOB_HEALTH_COLUMNS])
+      const [news, ingest] = rows
+      // Latest ingest run failed after an earlier success; the 2-day-old failure is outside 24 h.
+      expect(ingest).toMatchObject({ job: 'ingest', last_status: 503, last_ok: false, assets_ok: 3, failures_24h: 1 })
+      expect(ingest.last_ok_at).not.toBeNull()
+      expect(news).toMatchObject({ job: 'daily-news', last_ok: false, last_ok_at: null, failures_24h: 1 })
+      expect(JSON.stringify(rows)).not.toMatch(/internal detail|OPENAI/)
+    }
+    await db.close()
+  }, 60000)
+
+  it('is idempotent, keeps the allowlist guard and rolls back cleanly', async () => {
+    const db = await currentReplica()
+    await db.exec(sql(join(MIGRATIONS, JOB_HEALTH)))
+    await db.exec('create table public.unexpected (id int)')
+    await expect(db.exec(sql(join(MIGRATIONS, JOB_HEALTH)))).rejects.toThrow(/Unexpected .* on public\.unexpected/)
+    await db.exec('drop table public.unexpected')
+    await db.exec(sql(JOB_HEALTH_ROLLBACK))
+    await expect(asRole(db, 'anon', 'select 1 from public.job_health_public')).rejects.toThrow(/does not exist/)
+    // The dashboard path and the lockdown are unaffected by the rollback.
+    expect(await asRole(db, 'anon', 'select symbol from public.current_signals_public')).toHaveLength(1)
     await expect(asRole(db, 'anon', 'select symbol from public.radar_signals')).rejects.toThrow(/permission denied/)
     await db.close()
   }, 60000)

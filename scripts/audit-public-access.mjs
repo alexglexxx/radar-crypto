@@ -41,6 +41,8 @@ const cases = [
   ['radar_public_metrics', 'signal_id'],
   ['public_current_signals', 'symbol'],
   ['public_signal_history', 'symbol'],
+  // Private run log behind job_health_public; 404 until its migration is applied.
+  ['job_runs', 'id'],
 ]
 let failures = 0
 for (const [table, column] of cases) {
@@ -48,9 +50,16 @@ for (const [table, column] of cases) {
     method: 'HEAD', headers, signal: AbortSignal.timeout(10000),
   })
   const denied = response.status === 401 || response.status === 403
-  console.log(`${table}: HTTP ${response.status}${denied ? ' denied' : ' ACCESSIBLE'}`)
-  if (process.argv.includes('--expect-locked') && !denied) failures++
+  const absent = response.status === 404
+  console.log(`${table}: HTTP ${response.status}${denied ? ' denied' : absent ? ' absent' : ' ACCESSIBLE'}`)
+  if (process.argv.includes('--expect-locked') && !denied && !absent) failures++
 }
+
+// Informational: the health view exists only after 20261024120000.
+const health = await fetch(`${base}/rest/v1/job_health_public?select=job,last_run_at,last_ok`, {
+  headers, signal: AbortSignal.timeout(10000),
+})
+console.log(`job_health_public: HTTP ${health.status}${health.ok ? ` ${(await health.json()).length} jobs` : ''}`)
 
 const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']
 for (const symbol of symbols) {

@@ -20,13 +20,19 @@ function database() {
   const snapshots = new Map<string, any>()
   const features = new Map<string, any>()
   const signals = new Map<string, any>()
-  const state = { failSignal: false, failReadback: false }
+  const jobRuns: any[] = []
+  const state = { failSignal: false, failReadback: false, failJobRun: false }
   const fetcher = vi.fn<typeof fetch>(async (input, init) => {
     const url = new URL(String(input)), q = url.searchParams
     const table = url.pathname.split('/').pop()
     const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } })
     if (init?.method === 'POST') {
       const prefer = new Headers(init.headers).get('prefer') ?? ''
+      if (table === 'job_runs') {
+        if (state.failJobRun) return json({ message: 'job run write failed' }, 400)
+        jobRuns.push(JSON.parse(String(init.body)))
+        return new Response(null, { status: 201 })
+      }
       if (table === 'radar_signals' && state.failSignal) return json({ message: 'signal write failed' }, 400)
       const body = JSON.parse(String(init.body))
       const rows = Array.isArray(body) ? body : [body]
@@ -48,7 +54,7 @@ function database() {
     throw new Error(`Unexpected database request ${url}`)
   })
   vi.stubGlobal('fetch', fetcher)
-  return { snapshots, features, signals, fetcher, state }
+  return { snapshots, features, signals, jobRuns, fetcher, state }
 }
 
 beforeEach(() => {
@@ -148,6 +154,29 @@ describe('cron persistence and recovery', () => {
     expect(body.results).toHaveLength(3)
     expect(body.errors[0]).toMatchObject({ symbol: 'BTCUSDT', error: 'Stale Binance candles for BTCUSDT' })
     expect(db.signals.size).toBe(3)
+  })
+
+  it('records each authorized run with its HTTP status and asset count', async () => {
+    const db = database()
+    expect((await GET(request())).status).toBe(200)
+    vi.mocked(fetchBinanceClosedCandles).mockImplementation(async symbol => {
+      if (symbol === 'SOLUSDT') throw new Error('Binance down')
+      return candles
+    })
+    expect((await GET(request())).status).toBe(503)
+    expect(db.jobRuns).toHaveLength(2)
+    expect(db.jobRuns[0]).toMatchObject({ job: 'ingest', http_status: 200, ok: true, assets_ok: 4, assets_total: 4, errors: [] })
+    expect(db.jobRuns[1]).toMatchObject({ job: 'ingest', http_status: 503, ok: false, assets_ok: 3, assets_total: 4,
+      errors: [{ symbol: 'SOLUSDT', error: 'Binance down' }] })
+    expect(db.jobRuns[1].started_at).toBe(new Date(NOW).toISOString())
+  })
+
+  it('keeps the ingestion result when the health record cannot be written', async () => {
+    const db = database()
+    db.state.failJobRun = true
+    expect((await GET(request())).status).toBe(200)
+    expect(db.signals.size).toBe(4)
+    expect(db.jobRuns).toHaveLength(0)
   })
 
   it('does not emit a signal when persisted features cannot be recovered', async () => {
