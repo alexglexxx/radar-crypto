@@ -1,0 +1,4 @@
+date	candidate	kind	horizon	rules	period	commit	verdict	signals	episodes	excess	p_outperformance	net_cost	leak_divergences
+2026-10-24	v1.1-live	strategy	4h	gate-v1	2023-10 a 2026-09	d395e2e	RECHAZADO	51790	5232	0.000332894	0.0619690	-0.00138262	0
+2026-10-24	control-random	control	4h	gate-v1	2023-10 a 2026-09	d395e2e	RECHAZADO	50572	5609	-0.0000192790	0.614693	-0.00174699	0
+2026-10-24	control-lookahead	control	4h	gate-v1	2023-10 a 2026-09	d395e2e	RECHAZADO	212821	5233	0.00937478	0.000499750	0.00764659	800

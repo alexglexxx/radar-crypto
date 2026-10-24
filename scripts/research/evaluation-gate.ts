@@ -2,11 +2,17 @@ import { type Candle } from '../../lib/features'
 import { HORIZONS, circularPValue, episodes, mean } from './live-baseline-core'
 import { TAIL_BARS, WARMUP_BARS } from './historical-baseline'
 
+export type GateRules = {
+  version: string; execution: string; costRoundTrip: number; stressCostRoundTrip: number
+  alpha: number; minEpisodes: number; minPositiveAssets: number; leakChecksPerAsset: number; permutations: number
+}
+
 // Rules are fixed before any candidate runs. Changing them makes a new gate
 // version; every verdict stays tied to the version that produced it.
-export const GATE_RULES = {
+export const GATE_RULES: Readonly<GateRules> = {
   version: 'gate-v1',
-  execution: 'Signal at candle i close, enter i+1 open, exit i+bars+1 open.',
+  // Signal at candle i close, enter at i+1 open, exit at i+bars+1 open.
+  execution: 'la señal se da al cierre de una vela, se compra en la apertura de la siguiente y se vende en la apertura cuando se cumple el horizonte.',
   costRoundTrip: 0.002,
   stressCostRoundTrip: 0.003,
   alpha: 0.05,
@@ -14,9 +20,8 @@ export const GATE_RULES = {
   minPositiveAssets: 3,
   leakChecksPerAsset: 200,
   permutations: 2000,
-} as const
+}
 
-export type GateRules = Omit<typeof GATE_RULES, 'version' | 'execution'> & { version: string; execution: string }
 export type Horizon = typeof HORIZONS[number]['name']
 
 export type Candidate = {
