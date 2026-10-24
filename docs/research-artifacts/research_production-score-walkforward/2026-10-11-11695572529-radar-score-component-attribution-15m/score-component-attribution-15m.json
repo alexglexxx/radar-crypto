@@ -1,0 +1,781 @@
+{
+  "reportName": "radar-crypto-score-component-attribution-15m",
+  "generatedAt": "2026-10-11T07:41:15.155Z",
+  "methodology": {
+    "researchOnly": true,
+    "productionFilesModified": false,
+    "horizon": "4h; next candle open entry, open 16 bars later exit",
+    "costsBpsRoundTrip": [
+      15,
+      20,
+      25
+    ],
+    "scoreFormulaParityCheckedEveryObservation": true,
+    "regime": "EMA50 vs EMA200 with a 1% neutral band",
+    "caveat": "Component grouping is conditional association, not causal contribution. Rows overlap in time and across symbols; metrics are not a portfolio backtest."
+  },
+  "configuration": {
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "months": 24,
+    "observations": 279452
+  },
+  "coverage": [
+    {
+      "symbol": "BTCUSDT",
+      "candles": 70080,
+      "start": "2024-10-01T00:00:00.000Z",
+      "end": "2026-09-30T23:45:00.000Z",
+      "gaps": 0
+    },
+    {
+      "symbol": "ETHUSDT",
+      "candles": 70080,
+      "start": "2024-10-01T00:00:00.000Z",
+      "end": "2026-09-30T23:45:00.000Z",
+      "gaps": 0
+    },
+    {
+      "symbol": "SOLUSDT",
+      "candles": 70080,
+      "start": "2024-10-01T00:00:00.000Z",
+      "end": "2026-09-30T23:45:00.000Z",
+      "gaps": 0
+    },
+    {
+      "symbol": "XRPUSDT",
+      "candles": 70080,
+      "start": "2024-10-01T00:00:00.000Z",
+      "end": "2026-09-30T23:45:00.000Z",
+      "gaps": 0
+    }
+  ],
+  "componentConditionalResults": [
+    {
+      "component": "trend",
+      "positive": {
+        "contributionMean": 10.852520942890758,
+        "netAt15bps": {
+          "observations": 141098,
+          "winRate": 0.41132404428127967,
+          "expectancy": -0.001068870424673133,
+          "profitFactor": 0.7964203771592895
+        }
+      },
+      "negative": {
+        "contributionMean": -10.927237376584703,
+        "netAt15bps": {
+          "observations": 138354,
+          "winRate": 0.4426832617777585,
+          "expectancy": -0.00157689919518532,
+          "profitFactor": 0.7181339974092271
+        }
+      },
+      "neutral": {
+        "observations": 0,
+        "winRate": null,
+        "expectancy": null,
+        "profitFactor": 0
+      },
+      "caveat": "Overlapping observations; conditional association, not causal attribution or portfolio returns."
+    },
+    {
+      "component": "momentum",
+      "positive": {
+        "contributionMean": 4.248863227799217,
+        "netAt15bps": {
+          "observations": 143198,
+          "winRate": 0.4134904118772609,
+          "expectancy": -0.00128482953921925,
+          "profitFactor": 0.760403666289707
+        }
+      },
+      "negative": {
+        "contributionMean": -4.323224226290572,
+        "netAt15bps": {
+          "observations": 136254,
+          "winRate": 0.44088980873955996,
+          "expectancy": -0.0013577639560973104,
+          "profitFactor": 0.7523230116086405
+        }
+      },
+      "neutral": {
+        "observations": 0,
+        "winRate": null,
+        "expectancy": null,
+        "profitFactor": 0
+      },
+      "caveat": "Overlapping observations; conditional association, not causal attribution or portfolio returns."
+    },
+    {
+      "component": "volume",
+      "positive": {
+        "contributionMean": 6.429245839726189,
+        "netAt15bps": {
+          "observations": 93203,
+          "winRate": 0.4326470177998562,
+          "expectancy": -0.0012789271938462513,
+          "profitFactor": 0.7788104786105537
+        }
+      },
+      "negative": {
+        "contributionMean": -6,
+        "netAt15bps": {
+          "observations": 109282,
+          "winRate": 0.4226862612324079,
+          "expectancy": -0.0013942048732059774,
+          "profitFactor": 0.7298292903248681
+        }
+      },
+      "neutral": {
+        "observations": 76967,
+        "winRate": 0.4257409019449894,
+        "expectancy": -0.0012657949800492796,
+        "profitFactor": 0.7635274796938168
+      },
+      "caveat": "Overlapping observations; conditional association, not causal attribution or portfolio returns."
+    },
+    {
+      "component": "macd",
+      "positive": {
+        "contributionMean": 5,
+        "netAt15bps": {
+          "observations": 140196,
+          "winRate": 0.4187922622614055,
+          "expectancy": -0.0013357061766410797,
+          "profitFactor": 0.7518816862341117
+        }
+      },
+      "negative": {
+        "contributionMean": -5,
+        "netAt15bps": {
+          "observations": 139256,
+          "winRate": 0.43496150973746195,
+          "expectancy": -0.0013049716155198146,
+          "profitFactor": 0.7609245633830047
+        }
+      },
+      "neutral": {
+        "observations": 0,
+        "winRate": null,
+        "expectancy": null,
+        "profitFactor": 0
+      },
+      "caveat": "Overlapping observations; conditional association, not causal attribution or portfolio returns."
+    },
+    {
+      "component": "rsi",
+      "positive": {
+        "contributionMean": 3.3437089044299304,
+        "netAt15bps": {
+          "observations": 181741,
+          "winRate": 0.41557491154995296,
+          "expectancy": -0.0012799989048920743,
+          "profitFactor": 0.7569559148081326
+        }
+      },
+      "negative": {
+        "contributionMean": -5.093198168737737,
+        "netAt15bps": {
+          "observations": 27522,
+          "winRate": 0.4715863672698205,
+          "expectancy": -0.0010758873316005341,
+          "profitFactor": 0.8204627593616118
+        }
+      },
+      "neutral": {
+        "observations": 70189,
+        "winRate": 0.4385017595349699,
+        "expectancy": -0.0015208499667597412,
+        "profitFactor": 0.72821882296681
+      },
+      "caveat": "Overlapping observations; conditional association, not causal attribution or portfolio returns."
+    },
+    {
+      "component": "volatility",
+      "positive": {
+        "contributionMean": null,
+        "netAt15bps": {
+          "observations": 0,
+          "winRate": null,
+          "expectancy": null,
+          "profitFactor": 0
+        }
+      },
+      "negative": {
+        "contributionMean": -5,
+        "netAt15bps": {
+          "observations": 2,
+          "winRate": 1,
+          "expectancy": 0.01313513479160383,
+          "profitFactor": null
+        }
+      },
+      "neutral": {
+        "observations": 279450,
+        "winRate": 0.42684558955090357,
+        "expectancy": -0.0013204940443757353,
+        "profitFactor": 0.756401879693031
+      },
+      "caveat": "Overlapping observations; conditional association, not causal attribution or portfolio returns."
+    }
+  ],
+  "bySymbolAtScore75": [
+    {
+      "symbol": "BTCUSDT",
+      "at15bps": {
+        "observations": 6528,
+        "winRate": 0.38419117647058826,
+        "expectancy": -0.0014782747438601951,
+        "profitFactor": 0.6732151911149543
+      },
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 6528,
+          "winRate": 0.38419117647058826,
+          "expectancy": -0.0014782747438601951,
+          "profitFactor": 0.6732151911149543
+        },
+        {
+          "costBps": 20,
+          "observations": 6528,
+          "winRate": 0.3622855392156863,
+          "expectancy": -0.001978274743860169,
+          "profitFactor": 0.5910100687712135
+        },
+        {
+          "costBps": 25,
+          "observations": 6528,
+          "winRate": 0.33746936274509803,
+          "expectancy": -0.0024782747438602476,
+          "profitFactor": 0.5199648964870252
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "at15bps": {
+        "observations": 8268,
+        "winRate": 0.42331881954523465,
+        "expectancy": -0.0007720126137346615,
+        "profitFactor": 0.8669306286104578
+      },
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 8268,
+          "winRate": 0.42331881954523465,
+          "expectancy": -0.0007720126137346615,
+          "profitFactor": 0.8669306286104578
+        },
+        {
+          "costBps": 20,
+          "observations": 8268,
+          "winRate": 0.40324141267537494,
+          "expectancy": -0.0012720126137346218,
+          "profitFactor": 0.7912982789712127
+        },
+        {
+          "costBps": 25,
+          "observations": 8268,
+          "winRate": 0.38522012578616355,
+          "expectancy": -0.0017720126137346908,
+          "profitFactor": 0.723038492108174
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "at15bps": {
+        "observations": 9794,
+        "winRate": 0.43097814988768635,
+        "expectancy": -0.0014885735935879789,
+        "profitFactor": 0.7817669219501296
+      },
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 9794,
+          "winRate": 0.43097814988768635,
+          "expectancy": -0.0014885735935879789,
+          "profitFactor": 0.7817669219501296
+        },
+        {
+          "costBps": 20,
+          "observations": 9794,
+          "winRate": 0.41382479068817646,
+          "expectancy": -0.00198857359358795,
+          "profitFactor": 0.7203205384347323
+        },
+        {
+          "costBps": 25,
+          "observations": 9794,
+          "winRate": 0.3989177047171738,
+          "expectancy": -0.0024885735935880177,
+          "profitFactor": 0.6640198221984864
+        }
+      ]
+    },
+    {
+      "symbol": "XRPUSDT",
+      "at15bps": {
+        "observations": 9233,
+        "winRate": 0.4405935232318856,
+        "expectancy": 0.0006489027823422379,
+        "profitFactor": 1.0900728736705814
+      },
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 9233,
+          "winRate": 0.4405935232318856,
+          "expectancy": 0.0006489027823422379,
+          "profitFactor": 1.0900728736705814
+        },
+        {
+          "costBps": 20,
+          "observations": 9233,
+          "winRate": 0.42792158561680926,
+          "expectancy": 0.00014890278234225423,
+          "profitFactor": 1.0198882772593574
+        },
+        {
+          "costBps": 25,
+          "observations": 9233,
+          "winRate": 0.41546626231993933,
+          "expectancy": -0.00035109721765778955,
+          "profitFactor": 0.954849788038269
+        }
+      ]
+    }
+  ],
+  "scoreBucketsAt15bps": [
+    {
+      "name": "score_60_69",
+      "min": 60,
+      "max": 69,
+      "observations": 45522,
+      "winRate": 0.4032775361363736,
+      "expectancy": -0.0012483031726481123,
+      "profitFactor": 0.753798663485556,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 45522,
+          "winRate": 0.4032775361363736,
+          "expectancy": -0.0012483031726481123,
+          "profitFactor": 0.753798663485556
+        },
+        {
+          "costBps": 20,
+          "observations": 45522,
+          "winRate": 0.37953077632792936,
+          "expectancy": -0.001748303172648071,
+          "profitFactor": 0.6747045336710317
+        },
+        {
+          "costBps": 25,
+          "observations": 45522,
+          "winRate": 0.3577391151531128,
+          "expectancy": -0.002248303172648133,
+          "profitFactor": 0.6048837565899572
+        }
+      ]
+    },
+    {
+      "name": "score_70_74",
+      "min": 70,
+      "max": 74,
+      "observations": 18089,
+      "winRate": 0.40748521200729726,
+      "expectancy": -0.0011487703164600163,
+      "profitFactor": 0.7842210252207964,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 18089,
+          "winRate": 0.40748521200729726,
+          "expectancy": -0.0011487703164600163,
+          "profitFactor": 0.7842210252207964
+        },
+        {
+          "costBps": 20,
+          "observations": 18089,
+          "winRate": 0.38548289015423737,
+          "expectancy": -0.001648770316459976,
+          "profitFactor": 0.7069031467930523
+        },
+        {
+          "costBps": 25,
+          "observations": 18089,
+          "winRate": 0.36585770357675934,
+          "expectancy": -0.0021487703164600716,
+          "profitFactor": 0.6381155689411725
+        }
+      ]
+    },
+    {
+      "name": "score_75_79",
+      "min": 75,
+      "max": 79,
+      "observations": 13846,
+      "winRate": 0.4160768452982811,
+      "expectancy": -0.0009989062826311517,
+      "profitFactor": 0.8165073377339165,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 13846,
+          "winRate": 0.4160768452982811,
+          "expectancy": -0.0009989062826311517,
+          "profitFactor": 0.8165073377339165
+        },
+        {
+          "costBps": 20,
+          "observations": 13846,
+          "winRate": 0.3949154990611007,
+          "expectancy": -0.0014989062826311257,
+          "profitFactor": 0.7389246023700982
+        },
+        {
+          "costBps": 25,
+          "observations": 13846,
+          "winRate": 0.37527083634262604,
+          "expectancy": -0.0019989062826312014,
+          "profitFactor": 0.6695559087378218
+        }
+      ]
+    },
+    {
+      "name": "score_80_84",
+      "min": 80,
+      "max": 84,
+      "observations": 9349,
+      "winRate": 0.41565942881591617,
+      "expectancy": -0.0008889861872566476,
+      "profitFactor": 0.8525956585415669,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 9349,
+          "winRate": 0.41565942881591617,
+          "expectancy": -0.0008889861872566476,
+          "profitFactor": 0.8525956585415669
+        },
+        {
+          "costBps": 20,
+          "observations": 9349,
+          "winRate": 0.39908011552037653,
+          "expectancy": -0.0013889861872566182,
+          "profitFactor": 0.7804714411770522
+        },
+        {
+          "costBps": 25,
+          "observations": 9349,
+          "winRate": 0.3828216921595893,
+          "expectancy": -0.0018889861872566957,
+          "profitFactor": 0.7151630153217099
+        }
+      ]
+    },
+    {
+      "name": "score_85_89",
+      "min": 85,
+      "max": 89,
+      "observations": 5491,
+      "winRate": 0.431069022036059,
+      "expectancy": -0.0005134262336637541,
+      "profitFactor": 0.922676594937071,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 5491,
+          "winRate": 0.431069022036059,
+          "expectancy": -0.0005134262336637541,
+          "profitFactor": 0.922676594937071
+        },
+        {
+          "costBps": 20,
+          "observations": 5491,
+          "winRate": 0.415407029684939,
+          "expectancy": -0.001013426233663723,
+          "profitFactor": 0.8537260320147646
+        },
+        {
+          "costBps": 25,
+          "observations": 5491,
+          "winRate": 0.4006556182844655,
+          "expectancy": -0.0015134262336637908,
+          "profitFactor": 0.790502038506781
+        }
+      ]
+    },
+    {
+      "name": "score_90_100",
+      "min": 90,
+      "max": 100,
+      "observations": 5137,
+      "winRate": 0.4444228148724937,
+      "expectancy": 0.00006623778440894264,
+      "profitFactor": 1.0079872700832289,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 5137,
+          "winRate": 0.4444228148724937,
+          "expectancy": 0.00006623778440894264,
+          "profitFactor": 1.0079872700832289
+        },
+        {
+          "costBps": 20,
+          "observations": 5137,
+          "winRate": 0.4327428460190773,
+          "expectancy": -0.000433762215591038,
+          "profitFactor": 0.949408097035645
+        },
+        {
+          "costBps": 25,
+          "observations": 5137,
+          "winRate": 0.4197002141327623,
+          "expectancy": -0.0009337622155910837,
+          "profitFactor": 0.8946173597080168
+        }
+      ]
+    }
+  ],
+  "regimesAtScore75": [
+    {
+      "regime": "bull",
+      "at15bps": {
+        "observations": 13814,
+        "winRate": 0.43825104965976547,
+        "expectancy": -0.00003341976374866004,
+        "profitFactor": 0.9951893896872623
+      },
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 13814,
+          "winRate": 0.43825104965976547,
+          "expectancy": -0.00003341976374866004,
+          "profitFactor": 0.9951893896872623
+        },
+        {
+          "costBps": 20,
+          "observations": 13814,
+          "winRate": 0.42348342261473865,
+          "expectancy": -0.0005334197637486211,
+          "profitFactor": 0.926238728553187
+        },
+        {
+          "costBps": 25,
+          "observations": 13814,
+          "winRate": 0.4092225278702765,
+          "expectancy": -0.0010334197637487037,
+          "profitFactor": 0.8626404555586311
+        }
+      ]
+    },
+    {
+      "regime": "sideways",
+      "at15bps": {
+        "observations": 17309,
+        "winRate": 0.4013518978566064,
+        "expectancy": -0.0016410540901519444,
+        "profitFactor": 0.7100100785878138
+      },
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 17309,
+          "winRate": 0.4013518978566064,
+          "expectancy": -0.0016410540901519444,
+          "profitFactor": 0.7100100785878138
+        },
+        {
+          "costBps": 20,
+          "observations": 17309,
+          "winRate": 0.38142007048356347,
+          "expectancy": -0.0021410540901519266,
+          "profitFactor": 0.6409609926324505
+        },
+        {
+          "costBps": 25,
+          "observations": 17309,
+          "winRate": 0.3620082038245999,
+          "expectancy": -0.0026410540901520008,
+          "profitFactor": 0.5793018612956348
+        }
+      ]
+    },
+    {
+      "regime": "bear",
+      "at15bps": {
+        "observations": 2700,
+        "winRate": 0.48,
+        "expectancy": 0.0015724880216117945,
+        "profitFactor": 1.2512143955468216
+      },
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 2700,
+          "winRate": 0.48,
+          "expectancy": 0.0015724880216117945,
+          "profitFactor": 1.2512143955468216
+        },
+        {
+          "costBps": 20,
+          "observations": 2700,
+          "winRate": 0.4633333333333333,
+          "expectancy": 0.0010724880216118006,
+          "profitFactor": 1.1643873959886986
+        },
+        {
+          "costBps": 25,
+          "observations": 2700,
+          "winRate": 0.4488888888888889,
+          "expectancy": 0.0005724880216118077,
+          "profitFactor": 1.0842323382015195
+        }
+      ]
+    }
+  ],
+  "volatilityQuartilesAtScore75": [
+    {
+      "label": "Q1-low",
+      "max": 0.0026833932945194167,
+      "observations": 4709,
+      "winRate": 0.36992992142705455,
+      "expectancy": -0.0011332257383284145,
+      "profitFactor": 0.6774452674276591,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 4709,
+          "winRate": 0.36992992142705455,
+          "expectancy": -0.0011332257383284145,
+          "profitFactor": 0.6774452674276591
+        },
+        {
+          "costBps": 20,
+          "observations": 4709,
+          "winRate": 0.34359736674453173,
+          "expectancy": -0.001633225738328367,
+          "profitFactor": 0.5740979677915632
+        },
+        {
+          "costBps": 25,
+          "observations": 4709,
+          "winRate": 0.31747717137396475,
+          "expectancy": -0.0021332257383284534,
+          "profitFactor": 0.4884406697177699
+        }
+      ],
+      "caveat": "Full-sample quartiles are descriptive and must not be used as live thresholds."
+    },
+    {
+      "label": "Q2",
+      "min": 0.0026833932945194167,
+      "max": 0.003986295248026215,
+      "observations": 7068,
+      "winRate": 0.41553480475382004,
+      "expectancy": -0.0007263098298137052,
+      "profitFactor": 0.8441693023852939,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 7068,
+          "winRate": 0.41553480475382004,
+          "expectancy": -0.0007263098298137052,
+          "profitFactor": 0.8441693023852939
+        },
+        {
+          "costBps": 20,
+          "observations": 7068,
+          "winRate": 0.3936049801924165,
+          "expectancy": -0.0012263098298136582,
+          "profitFactor": 0.7526965049929842
+        },
+        {
+          "costBps": 25,
+          "observations": 7068,
+          "winRate": 0.37422184493491795,
+          "expectancy": -0.0017263098298137428,
+          "profitFactor": 0.6722649845561804
+        }
+      ],
+      "caveat": "Full-sample quartiles are descriptive and must not be used as live thresholds."
+    },
+    {
+      "label": "Q3",
+      "min": 0.003986295248026215,
+      "max": 0.005814971934287383,
+      "observations": 9436,
+      "winRate": 0.42263671047053836,
+      "expectancy": -0.001101055705469053,
+      "profitFactor": 0.8199124472310848,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 9436,
+          "winRate": 0.42263671047053836,
+          "expectancy": -0.001101055705469053,
+          "profitFactor": 0.8199124472310848
+        },
+        {
+          "costBps": 20,
+          "observations": 9436,
+          "winRate": 0.4052564646036456,
+          "expectancy": -0.001601055705469008,
+          "profitFactor": 0.7501073860178349
+        },
+        {
+          "costBps": 25,
+          "observations": 9436,
+          "winRate": 0.38904196693514204,
+          "expectancy": -0.0021010557054691073,
+          "profitFactor": 0.6867950537628178
+        }
+      ],
+      "caveat": "Full-sample quartiles are descriptive and must not be used as live thresholds."
+    },
+    {
+      "label": "Q4-high",
+      "min": 0.005814971934287383,
+      "observations": 12610,
+      "winRate": 0.4464710547184774,
+      "expectancy": -0.0002982925209194817,
+      "profitFactor": 0.9637066412063352,
+      "costSensitivity": [
+        {
+          "costBps": 15,
+          "observations": 12610,
+          "winRate": 0.4464710547184774,
+          "expectancy": -0.0002982925209194817,
+          "profitFactor": 0.9637066412063352
+        },
+        {
+          "costBps": 20,
+          "observations": 12610,
+          "winRate": 0.4344964314036479,
+          "expectancy": -0.0007982925209194586,
+          "profitFactor": 0.90607034281419
+        },
+        {
+          "costBps": 25,
+          "observations": 12610,
+          "winRate": 0.4218873909595559,
+          "expectancy": -0.0012982925209195292,
+          "profitFactor": 0.8522115061853643
+        }
+      ],
+      "caveat": "Full-sample quartiles are descriptive and must not be used as live thresholds."
+    }
+  ]
+}

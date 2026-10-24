@@ -1,0 +1,663 @@
+{
+  "id": "s7_meanrev_sideways_4h",
+  "idea": 7,
+  "title": "Reversión a la media solo en mercado lateral — 4h",
+  "hypothesis": "En un mercado sin tendencia, una caída exagerada (z-score) tiende a regresar a su promedio de 20 velas.",
+  "timeframe": "4h",
+  "gridSize": 24,
+  "verdict": "not_qualified",
+  "verdictReasons": [
+    "Falla: Expectativa neta a 20 bps debe ser > 0",
+    "Falla: Expectativa neta a 30 bps (estrés) debe ser > 0",
+    "Falla: Límite inferior del intervalo de confianza (corregido por 15 estrategias) debe ser > 0",
+    "Falla: Al menos 60% de los periodos fuera de muestra deben ser positivos",
+    "Falla: Debe superar a \"estar siempre dentro\" con la misma salida"
+  ],
+  "pooled": {
+    "10": {
+      "trades": 120,
+      "winRate": 0.44166666666666665,
+      "expectancy": -0.005858946982765569,
+      "median": -0.003915531278016581,
+      "tStat": -2.0207006747803344,
+      "profitFactor": 0.6238096347350073,
+      "totalReturn": -0.7030736379318683,
+      "maxDrawdown": 0.16444453014121263,
+      "avgBars": 3.3
+    },
+    "20": {
+      "trades": 120,
+      "winRate": 0.4166666666666667,
+      "expectancy": -0.00685894698276557,
+      "median": -0.004915531278016581,
+      "tStat": -2.3655921170009835,
+      "profitFactor": 0.5751521576333998,
+      "totalReturn": -0.8230736379318684,
+      "maxDrawdown": 0.18917918617203555,
+      "avgBars": 3.3
+    },
+    "30": {
+      "trades": 120,
+      "winRate": 0.4,
+      "expectancy": -0.00785894698276557,
+      "median": -0.005915531278016581,
+      "tStat": -2.7104835592216325,
+      "profitFactor": 0.5304774913141588,
+      "totalReturn": -0.9430736379318685,
+      "maxDrawdown": 0.21318755335999007,
+      "avgBars": 3.3
+    }
+  },
+  "pooledCI": {
+    "alpha": 0.0033333333333333335,
+    "lo": -0.016785051111472275,
+    "hi": 0.003127741593937823
+  },
+  "alwaysInPooledExpectancy": -0.002253698060638859,
+  "edgeOverAlwaysIn": -0.004605248922126711,
+  "positiveFolds": 1,
+  "foldsWithTrades": 7,
+  "totalFolds": 8,
+  "exposure": 0.022602739726027398,
+  "buyAndHoldAvg": 0.12114881543269218,
+  "perSymbol": [
+    {
+      "symbol": "BTCUSDT",
+      "stats": {
+        "trades": 39,
+        "winRate": 0.38461538461538464,
+        "expectancy": -0.005911187333131107,
+        "median": -0.005960036995934946,
+        "tStat": -1.5964469516614794,
+        "profitFactor": 0.5307414078966586,
+        "totalReturn": -0.23053630599211317,
+        "maxDrawdown": 0.060145316965387455,
+        "avgBars": 3.1538461538461537
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "stats": {
+        "trades": 23,
+        "winRate": 0.391304347826087,
+        "expectancy": -0.005306346648237052,
+        "median": -0.019893625879915167,
+        "tStat": -0.6288561595294633,
+        "profitFactor": 0.7321428898848774,
+        "totalReturn": -0.12204597290945218,
+        "maxDrawdown": 0.04464886089656139,
+        "avgBars": 3.130434782608696
+      }
+    },
+    {
+      "symbol": "SOLUSDT",
+      "stats": {
+        "trades": 25,
+        "winRate": 0.44,
+        "expectancy": -0.009486945404413652,
+        "median": -0.004534242442526979,
+        "tStat": -1.2731246221270551,
+        "profitFactor": 0.5257833448873098,
+        "totalReturn": -0.23717363511034129,
+        "maxDrawdown": 0.06429209419721621,
+        "avgBars": 3.52
+      }
+    },
+    {
+      "symbol": "XRPUSDT",
+      "stats": {
+        "trades": 33,
+        "winRate": 0.45454545454545453,
+        "expectancy": -0.007070234058180659,
+        "median": -0.0027829320806421736,
+        "tStat": -1.3237883720158592,
+        "profitFactor": 0.5241168411483392,
+        "totalReturn": -0.23331772391996175,
+        "maxDrawdown": 0.05819706512491962,
+        "avgBars": 3.4242424242424243
+      }
+    }
+  ],
+  "exitReasons": {
+    "stop": 36,
+    "signal": 6,
+    "time": 78
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "train": "2023-10-01..2024-10-01",
+      "test": "2024-10-01..2025-01-01",
+      "buyAndHold": 0.8523794866819268,
+      "selected": {
+        "z": 2.5,
+        "maxDays": 2,
+        "stop": 2,
+        "band": 0.04
+      },
+      "abstainReason": null,
+      "trainStats": {
+        "trades": 88,
+        "winRate": 0.48863636363636365,
+        "expectancy": 0.0033876461065333787,
+        "median": -0.0021317972022886194,
+        "tStat": 0.8517206191897637,
+        "profitFactor": 1.265321002922378,
+        "totalReturn": 0.2981128573749373,
+        "maxDrawdown": 0.07104102224057789,
+        "avgBars": 6.829545454545454
+      },
+      "oos": {
+        "10": {
+          "trades": 14,
+          "winRate": 0.2857142857142857,
+          "expectancy": -0.011300763243962912,
+          "median": -0.02179798114181536,
+          "tStat": -1.2426837451618944,
+          "profitFactor": 0.4619955564150706,
+          "totalReturn": -0.15821068541548078,
+          "maxDrawdown": 0.059573976285600794,
+          "avgBars": 6.857142857142857
+        },
+        "20": {
+          "trades": 14,
+          "winRate": 0.2857142857142857,
+          "expectancy": -0.012300763243962913,
+          "median": -0.02279798114181536,
+          "tStat": -1.3526483305916228,
+          "profitFactor": 0.43364691831539154,
+          "totalReturn": -0.1722106854154808,
+          "maxDrawdown": 0.06217141487409272,
+          "avgBars": 6.857142857142857
+        },
+        "30": {
+          "trades": 14,
+          "winRate": 0.2857142857142857,
+          "expectancy": -0.013300763243962914,
+          "median": -0.023797981141815357,
+          "tStat": -1.4626129160213515,
+          "profitFactor": 0.4071035265172163,
+          "totalReturn": -0.1862106854154808,
+          "maxDrawdown": 0.06476232996365361,
+          "avgBars": 6.857142857142857
+        }
+      },
+      "alwaysIn": {
+        "trades": 751,
+        "winRate": 0.507323568575233,
+        "expectancy": 0.00005527961804047657,
+        "median": 0.00006727998119471397,
+        "tStat": 0.06032220827313498,
+        "profitFactor": 1.0070396050780672,
+        "totalReturn": 0.041514993148397905,
+        "maxDrawdown": 0.2216425998861284,
+        "avgBars": 1.937416777629827
+      }
+    },
+    {
+      "fold": 2,
+      "train": "2024-01-01..2025-01-01",
+      "test": "2025-01-01..2025-04-01",
+      "buyAndHold": -0.22774879211469315,
+      "selected": {
+        "z": 2.5,
+        "maxDays": 0.5,
+        "stop": 3,
+        "band": 0.04
+      },
+      "abstainReason": null,
+      "trainStats": {
+        "trades": 86,
+        "winRate": 0.5930232558139535,
+        "expectancy": 0.0028433107823938224,
+        "median": 0.005628657516993487,
+        "tStat": 0.9699517862000544,
+        "profitFactor": 1.3482131567276734,
+        "totalReturn": 0.24452472728586871,
+        "maxDrawdown": 0.0454129737467258,
+        "avgBars": 2.7209302325581395
+      },
+      "oos": {
+        "10": {
+          "trades": 24,
+          "winRate": 0.4166666666666667,
+          "expectancy": -0.0030033827288281495,
+          "median": -0.010181440011819143,
+          "tStat": -0.3342539067178767,
+          "profitFactor": 0.8470275244897519,
+          "totalReturn": -0.07208118549187559,
+          "maxDrawdown": 0.05770617765874492,
+          "avgBars": 2.375
+        },
+        "20": {
+          "trades": 24,
+          "winRate": 0.375,
+          "expectancy": -0.00400338272882815,
+          "median": -0.011181440011819144,
+          "tStat": -0.4455463848657733,
+          "profitFactor": 0.8021119577198286,
+          "totalReturn": -0.09608118549187561,
+          "maxDrawdown": 0.05913283196058881,
+          "avgBars": 2.375
+        },
+        "30": {
+          "trades": 24,
+          "winRate": 0.375,
+          "expectancy": -0.00500338272882815,
+          "median": -0.012181440011819141,
+          "tStat": -0.5568388630136699,
+          "profitFactor": 0.7600933953025227,
+          "totalReturn": -0.1200811854918756,
+          "maxDrawdown": 0.06055768584042546,
+          "avgBars": 2.375
+        }
+      },
+      "alwaysIn": {
+        "trades": 784,
+        "winRate": 0.4247448979591837,
+        "expectancy": -0.0037747429170558347,
+        "median": -0.0019206518830288104,
+        "tStat": -3.9390606881831802,
+        "profitFactor": 0.6375963505593968,
+        "totalReturn": -2.9593984469717745,
+        "maxDrawdown": 0.5440991980169229,
+        "avgBars": 1.7551020408163265
+      }
+    },
+    {
+      "fold": 3,
+      "train": "2024-04-01..2025-04-01",
+      "test": "2025-04-01..2025-07-01",
+      "buyAndHold": 0.24375469385883008,
+      "selected": {
+        "z": 2.5,
+        "maxDays": 0.5,
+        "stop": 2,
+        "band": 0.04
+      },
+      "abstainReason": null,
+      "trainStats": {
+        "trades": 114,
+        "winRate": 0.5,
+        "expectancy": 0.00011700559713650345,
+        "median": -0.00006910021629169365,
+        "tStat": 0.04330755615844898,
+        "profitFactor": 1.0105538186776413,
+        "totalReturn": 0.013338638073561393,
+        "maxDrawdown": 0.054715201803700875,
+        "avgBars": 2.3421052631578947
+      },
+      "oos": {
+        "10": {
+          "trades": 19,
+          "winRate": 0.6842105263157895,
+          "expectancy": 0.007266921620764863,
+          "median": 0.009399021268586494,
+          "tStat": 1.3672954754519502,
+          "profitFactor": 2.1703569307383277,
+          "totalReturn": 0.1380715107945324,
+          "maxDrawdown": 0.014887000738152962,
+          "avgBars": 2.5789473684210527
+        },
+        "20": {
+          "trades": 19,
+          "winRate": 0.631578947368421,
+          "expectancy": 0.006266921620764862,
+          "median": 0.008399021268586495,
+          "tStat": 1.1791421490771379,
+          "profitFactor": 1.958154521014204,
+          "totalReturn": 0.11907151079453238,
+          "maxDrawdown": 0.015383202548286566,
+          "avgBars": 2.5789473684210527
+        },
+        "30": {
+          "trades": 19,
+          "winRate": 0.631578947368421,
+          "expectancy": 0.005266921620764861,
+          "median": 0.007399021268586495,
+          "tStat": 0.9909888227023259,
+          "profitFactor": 1.7623234497317048,
+          "totalReturn": 0.10007151079453237,
+          "maxDrawdown": 0.015879279358420033,
+          "avgBars": 2.5789473684210527
+        }
+      },
+      "alwaysIn": {
+        "trades": 851,
+        "winRate": 0.49236192714453586,
+        "expectancy": -0.0004888266968583882,
+        "median": -0.0004103542589006786,
+        "tStat": -0.7208044847849188,
+        "profitFactor": 0.9292033774623418,
+        "totalReturn": -0.41599151902648834,
+        "maxDrawdown": 0.27059398923712746,
+        "avgBars": 1.564042303172738
+      }
+    },
+    {
+      "fold": 4,
+      "train": "2024-07-01..2025-07-01",
+      "test": "2025-07-01..2025-10-01",
+      "buyAndHold": 0.3382784583933194,
+      "selected": {
+        "z": 2.5,
+        "maxDays": 0.5,
+        "stop": 2,
+        "band": 0.04
+      },
+      "abstainReason": null,
+      "trainStats": {
+        "trades": 94,
+        "winRate": 0.5106382978723404,
+        "expectancy": 0.002778628115789793,
+        "median": 0.0018052333021699746,
+        "tStat": 0.8605472234944034,
+        "profitFactor": 1.2528736891532946,
+        "totalReturn": 0.26119104288424055,
+        "maxDrawdown": 0.05086600649297661,
+        "avgBars": 2.404255319148936
+      },
+      "oos": {
+        "10": {
+          "trades": 11,
+          "winRate": 0.5454545454545454,
+          "expectancy": -0.002616401065835342,
+          "median": 0.001260483889463094,
+          "tStat": -0.6001003659821038,
+          "profitFactor": 0.5819851639801475,
+          "totalReturn": -0.028780411724188763,
+          "maxDrawdown": 0.013657105645352132,
+          "avgBars": 2.6363636363636362
+        },
+        "20": {
+          "trades": 11,
+          "winRate": 0.5454545454545454,
+          "expectancy": -0.0036164010658353424,
+          "median": 0.00026048388946309405,
+          "tStat": -0.8294613664105719,
+          "profitFactor": 0.46133655507575994,
+          "totalReturn": -0.039780411724188766,
+          "maxDrawdown": 0.014892820015434769,
+          "avgBars": 2.6363636363636362
+        },
+        "30": {
+          "trades": 11,
+          "winRate": 0.45454545454545453,
+          "expectancy": -0.004616401065835343,
+          "median": -0.000739516110536906,
+          "tStat": -1.05882236683904,
+          "profitFactor": 0.3619728271625848,
+          "totalReturn": -0.050780411724188776,
+          "maxDrawdown": 0.016127295573643535,
+          "avgBars": 2.6363636363636362
+        }
+      },
+      "alwaysIn": {
+        "trades": 862,
+        "winRate": 0.4419953596287703,
+        "expectancy": -0.0019202664730653186,
+        "median": -0.0013980550385638262,
+        "tStat": -3.5102969135883195,
+        "profitFactor": 0.7027604338693486,
+        "totalReturn": -1.6552696997823046,
+        "maxDrawdown": 0.38812446338624174,
+        "avgBars": 1.5591647331786542
+      }
+    },
+    {
+      "fold": 5,
+      "train": "2024-10-01..2025-10-01",
+      "test": "2025-10-01..2026-01-01",
+      "buyAndHold": -0.31753174545728435,
+      "selected": {
+        "z": 2.5,
+        "maxDays": 1,
+        "stop": 3,
+        "band": 0.04
+      },
+      "abstainReason": null,
+      "trainStats": {
+        "trades": 61,
+        "winRate": 0.5081967213114754,
+        "expectancy": 0.002359451304812612,
+        "median": 0.002837521867599337,
+        "tStat": 0.43895657668295385,
+        "profitFactor": 1.1507495532270196,
+        "totalReturn": 0.14392652959356933,
+        "maxDrawdown": 0.07305675022639545,
+        "avgBars": 4.836065573770492
+      },
+      "oos": {
+        "10": {
+          "trades": 21,
+          "winRate": 0.2857142857142857,
+          "expectancy": -0.02097455588116426,
+          "median": -0.025327581787944253,
+          "tStat": -2.5411088748836588,
+          "profitFactor": 0.2730751389147129,
+          "totalReturn": -0.44046567350444943,
+          "maxDrawdown": 0.12098567051687847,
+          "avgBars": 4.428571428571429
+        },
+        "20": {
+          "trades": 21,
+          "winRate": 0.2857142857142857,
+          "expectancy": -0.02197455588116426,
+          "median": -0.026327581787944254,
+          "tStat": -2.6622608501283715,
+          "profitFactor": 0.2568154558323453,
+          "totalReturn": -0.46146567350444945,
+          "maxDrawdown": 0.12496127493794662,
+          "avgBars": 4.428571428571429
+        },
+        "30": {
+          "trades": 21,
+          "winRate": 0.2857142857142857,
+          "expectancy": -0.02297455588116426,
+          "median": -0.02732758178794425,
+          "tStat": -2.783412825373084,
+          "profitFactor": 0.24132282320355286,
+          "totalReturn": -0.48246567350444947,
+          "maxDrawdown": 0.12891989322710662,
+          "avgBars": 4.428571428571429
+        }
+      },
+      "alwaysIn": {
+        "trades": 665,
+        "winRate": 0.4481203007518797,
+        "expectancy": -0.0030317975759581355,
+        "median": -0.0013448348667284265,
+        "tStat": -3.3781320083101143,
+        "profitFactor": 0.662340345466249,
+        "totalReturn": -2.01614538801216,
+        "maxDrawdown": 0.43079751212195855,
+        "avgBars": 2.3172932330827067
+      }
+    },
+    {
+      "fold": 6,
+      "train": "2025-01-01..2026-01-01",
+      "test": "2026-01-01..2026-04-01",
+      "buyAndHold": -0.2792807165244804,
+      "selected": {
+        "z": 2.5,
+        "maxDays": 0.5,
+        "stop": 2,
+        "band": 0.02
+      },
+      "abstainReason": null,
+      "trainStats": {
+        "trades": 45,
+        "winRate": 0.4666666666666667,
+        "expectancy": 0.00014572958367327406,
+        "median": -0.00032942555685821877,
+        "tStat": 0.032826298270114025,
+        "profitFactor": 1.0126974288477593,
+        "totalReturn": 0.006557831265297333,
+        "maxDrawdown": 0.04846309090514051,
+        "avgBars": 2.3333333333333335
+      },
+      "oos": {
+        "10": {
+          "trades": 13,
+          "winRate": 0.5384615384615384,
+          "expectancy": -0.0038714464940613224,
+          "median": 0.00022031703338421058,
+          "tStat": -0.6794583583786995,
+          "profitFactor": 0.6138698729332694,
+          "totalReturn": -0.05032880442279719,
+          "maxDrawdown": 0.022417294925949453,
+          "avgBars": 1.9230769230769231
+        },
+        "20": {
+          "trades": 13,
+          "winRate": 0.46153846153846156,
+          "expectancy": -0.004871446494061323,
+          "median": -0.0007796829666157894,
+          "tStat": -0.8549633949124518,
+          "profitFactor": 0.5381546906937793,
+          "totalReturn": -0.0633288044227972,
+          "maxDrawdown": 0.024376301904192866,
+          "avgBars": 1.9230769230769231
+        },
+        "30": {
+          "trades": 13,
+          "winRate": 0.38461538461538464,
+          "expectancy": -0.005871446494061323,
+          "median": -0.0017796829666157895,
+          "tStat": -1.030468431446204,
+          "profitFactor": 0.47222779439913826,
+          "totalReturn": -0.0763288044227972,
+          "maxDrawdown": 0.026331873029626012,
+          "avgBars": 1.9230769230769231
+        }
+      },
+      "alwaysIn": {
+        "trades": 793,
+        "winRate": 0.41488020176544765,
+        "expectancy": -0.003704179448691172,
+        "median": -0.002493290245940359,
+        "tStat": -4.982333433567372,
+        "profitFactor": 0.5896277584869304,
+        "totalReturn": -2.9374143028120994,
+        "maxDrawdown": 0.5456904863186307,
+        "avgBars": 1.7187894073139975
+      }
+    },
+    {
+      "fold": 7,
+      "train": "2025-04-01..2026-04-01",
+      "test": "2026-04-01..2026-07-01",
+      "buyAndHold": -0.18341113494549338,
+      "selected": {
+        "z": 2.5,
+        "maxDays": 0.5,
+        "stop": 2,
+        "band": 0.02
+      },
+      "abstainReason": null,
+      "trainStats": {
+        "trades": 40,
+        "winRate": 0.525,
+        "expectancy": 0.00018638320963284622,
+        "median": 0.00037860272281065206,
+        "tStat": 0.05640901131507558,
+        "profitFactor": 1.0235084017413403,
+        "totalReturn": 0.007455328385313849,
+        "maxDrawdown": 0.0274090434193938,
+        "avgBars": 2.4
+      },
+      "oos": {
+        "10": {
+          "trades": 18,
+          "winRate": 0.3888888888888889,
+          "expectancy": -0.005071021564867162,
+          "median": -0.0044839469816147495,
+          "tStat": -1.131876298189728,
+          "profitFactor": 0.4944751224145783,
+          "totalReturn": -0.09127838816760891,
+          "maxDrawdown": 0.027195202356978313,
+          "avgBars": 2.611111111111111
+        },
+        "20": {
+          "trades": 18,
+          "winRate": 0.3888888888888889,
+          "expectancy": -0.006071021564867163,
+          "median": -0.0054839469816147495,
+          "tStat": -1.3550810871481396,
+          "profitFactor": 0.4295392198535601,
+          "totalReturn": -0.10927838816760893,
+          "maxDrawdown": 0.030843573397866673,
+          "avgBars": 2.611111111111111
+        },
+        "30": {
+          "trades": 18,
+          "winRate": 0.3888888888888889,
+          "expectancy": -0.007071021564867162,
+          "median": -0.0064839469816147495,
+          "tStat": -1.5782858761065506,
+          "profitFactor": 0.37165593611403713,
+          "totalReturn": -0.12727838816760892,
+          "maxDrawdown": 0.03447917073045381,
+          "avgBars": 2.611111111111111
+        }
+      },
+      "alwaysIn": {
+        "trades": 819,
+        "winRate": 0.3968253968253968,
+        "expectancy": -0.0030634644952054566,
+        "median": -0.0020259276631228156,
+        "tStat": -6.005245586291802,
+        "profitFactor": 0.5384299814156106,
+        "totalReturn": -2.508977421573269,
+        "maxDrawdown": 0.4730867398797532,
+        "avgBars": 1.6654456654456655
+      }
+    },
+    {
+      "fold": 8,
+      "train": "2025-07-01..2026-07-01",
+      "test": "2026-07-01..2026-09-30",
+      "buyAndHold": 0.5427502735694124,
+      "selected": null,
+      "abstainReason": "ningún parámetro tuvo ventaja positiva suficiente en entrenamiento",
+      "trainStats": null,
+      "oos": {
+        "10": {
+          "trades": 0,
+          "winRate": null,
+          "expectancy": null,
+          "median": null,
+          "tStat": null,
+          "profitFactor": null,
+          "totalReturn": 0,
+          "maxDrawdown": null,
+          "avgBars": null
+        },
+        "20": {
+          "trades": 0,
+          "winRate": null,
+          "expectancy": null,
+          "median": null,
+          "tStat": null,
+          "profitFactor": null,
+          "totalReturn": 0,
+          "maxDrawdown": null,
+          "avgBars": null
+        },
+        "30": {
+          "trades": 0,
+          "winRate": null,
+          "expectancy": null,
+          "median": null,
+          "tStat": null,
+          "profitFactor": null,
+          "totalReturn": 0,
+          "maxDrawdown": null,
+          "avgBars": null
+        }
+      },
+      "alwaysIn": null
+    }
+  ]
+}

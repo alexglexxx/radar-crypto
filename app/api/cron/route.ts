@@ -5,6 +5,7 @@ import { fetchBinanceClosedCandles } from '../../../lib/market/binance'
 import { calculateFeatures } from '../../../lib/features'
 import { calculateRadarScore } from '../../../lib/scoring'
 import { evaluateMaturedLongSignals } from '../../../lib/outcomes'
+import { recordJobRun } from '../../../lib/job-runs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -52,8 +53,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
+  const startedAt = Date.now()
+  let supabase: ReturnType<typeof getSupabaseAdmin> | null = null
   try {
-    const supabase = getSupabaseAdmin()
+    supabase = getSupabaseAdmin()
     const results = []
     const errors: { symbol: string; error: string }[] = []
 
@@ -174,6 +177,11 @@ export async function GET(request: NextRequest) {
       errors.push({ symbol: 'outcomes', error: error instanceof Error ? error.message : 'Evaluation failed' })
     }
 
+    const status = errors.length ? 503 : 200
+    await recordJobRun(supabase, {
+      job: 'ingest', startedAt, httpStatus: status,
+      assetsOk: results.length, assetsTotal: SYMBOLS.length, errors,
+    })
     return NextResponse.json({
       ok: errors.length === 0,
       exchange: 'binance',
@@ -183,12 +191,11 @@ export async function GET(request: NextRequest) {
       outcomes,
       results,
       errors,
-    }, { status: errors.length ? 503 : 200 })
+    }, { status })
   } catch (error) {
     console.error('[radar-crypto cron]', error)
-    return NextResponse.json({
-      ok: false,
-      error: error instanceof Error ? error.message : 'Unknown ingestion error',
-    }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Unknown ingestion error'
+    if (supabase) await recordJobRun(supabase, { job: 'ingest', startedAt, httpStatus: 500, errors: [{ error: message }] })
+    return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

@@ -1,0 +1,1328 @@
+{
+  "reportName": "radar-crypto-donchian-portfolio-1h",
+  "generatedAt": "2026-10-19T09:03:18.149Z",
+  "startingPortfolioCapital": 1,
+  "productionUntouched": true,
+  "notDeployable": true,
+  "coverage": [
+    {
+      "symbol": "BTCUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0
+    },
+    {
+      "symbol": "ETHUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0
+    },
+    {
+      "symbol": "SOLUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0
+    },
+    {
+      "symbol": "XRPUSDT",
+      "expected": 17520,
+      "actual": 17520,
+      "missingHours": 0
+    }
+  ],
+  "methodology": {
+    "interval": "1h",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ],
+    "folds": [
+      [
+        "2025-10-01",
+        "2026-01-01"
+      ],
+      [
+        "2026-01-01",
+        "2026-04-01"
+      ],
+      [
+        "2026-04-01",
+        "2026-07-01"
+      ],
+      [
+        "2026-07-01",
+        "2026-10-01"
+      ]
+    ],
+    "costsBpsRoundTrip": [
+      15,
+      20,
+      25
+    ],
+    "allocation": "25% initial equity per symbol sleeve; idle cash remains in sleeve; no leverage or cross-sleeve borrowing.",
+    "metrics": "Hourly marked-to-market aggregate equity, return, max drawdown, trade count, and cost sensitivity. End-of-fold open positions liquidated at final in-window close and charged exit cost.",
+    "limitations": "Equal-sleeve portfolio proxy; ignores taxes, partial fills, spread variation, latency, exchange outages and market impact. Historical results are not a promise of future returns."
+  },
+  "strategies": [
+    {
+      "name": "donchian_20_10",
+      "entry": 20,
+      "exit": 10,
+      "folds": [
+        {
+          "fold": 1,
+          "testStart": "2025-10-01",
+          "testEnd": "2026-01-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 0.7216520694763359,
+            "returnPct": -27.834793052366415,
+            "maxDrawdownPct": 31.574833969985317,
+            "observations": 2208,
+            "trades": 145,
+            "winRate": 0.2413793103448276,
+            "forcedEndLiquidations": 1,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.1876641344944476,
+                "trades": 37,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.18997126939744716,
+                "trades": 36,
+                "forcedEndLiquidations": 1
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.14937155934942117,
+                "trades": 37,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.19464510623501996,
+                "trades": 35,
+                "forcedEndLiquidations": 0
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 0.7216520694763359,
+              "returnPct": -27.834793052366415,
+              "maxDrawdownPct": 31.574833969985317,
+              "observations": 2208,
+              "trades": 145,
+              "winRate": 0.2413793103448276,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.1876641344944476,
+                  "trades": 37,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.18997126939744716,
+                  "trades": 36,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.14937155934942117,
+                  "trades": 37,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.19464510623501996,
+                  "trades": 35,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 0.7086974485497913,
+              "returnPct": -29.130255145020868,
+              "maxDrawdownPct": 32.76943498208505,
+              "observations": 2208,
+              "trades": 145,
+              "winRate": 0.23448275862068965,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.18422128017181313,
+                  "trades": 37,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.18657943682941383,
+                  "trades": 36,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.14663121410353697,
+                  "trades": 37,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.19126551744502743,
+                  "trades": 35,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 0.695972346769126,
+              "returnPct": -30.4027653230874,
+              "maxDrawdownPct": 33.954210653244985,
+              "observations": 2208,
+              "trades": 145,
+              "winRate": 0.23448275862068965,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.18084074980382964,
+                  "trades": 37,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.18324733730042783,
+                  "trades": 36,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.14394047570616528,
+                  "trades": 37,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.18794378395870323,
+                  "trades": 35,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fold": 2,
+          "testStart": "2026-01-01",
+          "testEnd": "2026-04-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 1.0176770493324152,
+            "returnPct": 1.7677049332415207,
+            "maxDrawdownPct": 13.268656069376059,
+            "observations": 2160,
+            "trades": 103,
+            "winRate": 0.33980582524271846,
+            "forcedEndLiquidations": 0,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.24048274164641886,
+                "trades": 26,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.25644135482579805,
+                "trades": 24,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.2629023632609751,
+                "trades": 27,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.2578505895992232,
+                "trades": 26,
+                "forcedEndLiquidations": 0
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 1.0176770493324152,
+              "returnPct": 1.7677049332415207,
+              "maxDrawdownPct": 13.268656069376059,
+              "observations": 2160,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.24048274164641886,
+                  "trades": 26,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.25644135482579805,
+                  "trades": 24,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.2629023632609751,
+                  "trades": 27,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.2578505895992232,
+                  "trades": 26,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 1.004645075175603,
+              "returnPct": 0.4645075175603086,
+              "maxDrawdownPct": 13.617293045233872,
+              "observations": 2160,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.23737399649997215,
+                  "trades": 26,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.2533797858637738,
+                  "trades": 24,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.25937396431668314,
+                  "trades": 27,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.2545173284951741,
+                  "trades": 26,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 0.9917770839459871,
+              "returnPct": -0.822291605401293,
+              "maxDrawdownPct": 13.964635177156007,
+              "observations": 2160,
+              "trades": 103,
+              "winRate": 0.33980582524271846,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.23430467540518757,
+                  "trades": 26,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.2503540153987012,
+                  "trades": 24,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.2558920544640772,
+                  "trades": 27,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.251226338678021,
+                  "trades": 26,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fold": 3,
+          "testStart": "2026-04-01",
+          "testEnd": "2026-07-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 0.9312374461237805,
+            "returnPct": -6.8762553876219545,
+            "maxDrawdownPct": 8.72859593538239,
+            "observations": 2184,
+            "trades": 117,
+            "winRate": 0.358974358974359,
+            "forcedEndLiquidations": 0,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.23445081960656003,
+                "trades": 28,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.22350535780230554,
+                "trades": 30,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.25708217426753377,
+                "trades": 29,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.21619909444738106,
+                "trades": 30,
+                "forcedEndLiquidations": 0
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 0.9312374461237805,
+              "returnPct": -6.8762553876219545,
+              "maxDrawdownPct": 8.72859593538239,
+              "observations": 2184,
+              "trades": 117,
+              "winRate": 0.358974358974359,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.23445081960656003,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.22350535780230554,
+                  "trades": 30,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.25708217426753377,
+                  "trades": 29,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.21619909444738106,
+                  "trades": 30,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 0.9177191192839426,
+              "returnPct": -8.228088071605743,
+              "maxDrawdownPct": 9.382645356190054,
+              "observations": 2184,
+              "trades": 117,
+              "winRate": 0.3504273504273504,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.23118854289029275,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.2201749041736589,
+                  "trades": 30,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.2533781607614581,
+                  "trades": 29,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.2129775114585328,
+                  "trades": 30,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 0.9043938746040031,
+              "returnPct": -9.560612539599688,
+              "maxDrawdownPct": 10.149865925601665,
+              "observations": 2184,
+              "trades": 117,
+              "winRate": 0.3504273504273504,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.2279708597758592,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.21689326265845016,
+                  "trades": 30,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.2497266072268698,
+                  "trades": 29,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.2098031449428239,
+                  "trades": 30,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fold": 4,
+          "testStart": "2026-07-01",
+          "testEnd": "2026-10-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 1.374719436689957,
+            "returnPct": 37.47194366899571,
+            "maxDrawdownPct": 9.337615149022799,
+            "observations": 2208,
+            "trades": 115,
+            "winRate": 0.3826086956521739,
+            "forcedEndLiquidations": 2,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.30570000821607746,
+                "trades": 32,
+                "forcedEndLiquidations": 1
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.3329760800106452,
+                "trades": 27,
+                "forcedEndLiquidations": 1
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.34657411725425447,
+                "trades": 28,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.38946923120897997,
+                "trades": 28,
+                "forcedEndLiquidations": 0
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 1.374719436689957,
+              "returnPct": 37.47194366899571,
+              "maxDrawdownPct": 9.337615149022799,
+              "observations": 2208,
+              "trades": 115,
+              "winRate": 0.3826086956521739,
+              "forcedEndLiquidations": 2,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.30570000821607746,
+                  "trades": 32,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.3329760800106452,
+                  "trades": 27,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.34657411725425447,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.38946923120897997,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 1.3551523790587998,
+              "returnPct": 35.515237905879985,
+              "maxDrawdownPct": 9.524912744373632,
+              "observations": 2208,
+              "trades": 115,
+              "winRate": 0.3826086956521739,
+              "forcedEndLiquidations": 2,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.30084351427413636,
+                  "trades": 32,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.32850722535825166,
+                  "trades": 27,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.34175169575418557,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.3840499436722263,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 1.33586016635023,
+              "returnPct": 33.58601663502301,
+              "maxDrawdownPct": 9.820552361136562,
+              "observations": 2208,
+              "trades": 115,
+              "winRate": 0.3826086956521739,
+              "forcedEndLiquidations": 2,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.29606298625001365,
+                  "trades": 32,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.32409725095067965,
+                  "trades": 27,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.33699519421215596,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.37870473493738077,
+                  "trades": 28,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "positiveOosFolds": 2,
+      "methodology": "Finite-capital spot portfolio, four equal 25% independent sleeves, no leverage. Each sleeve buys only with its own cash, charges half the round-trip cost on entry and half on exit, marks equity hourly and liquidates remaining exposure at the last in-window close with exit cost. Fixed parameters; chronological OOS quarters."
+    },
+    {
+      "name": "donchian_55_20",
+      "entry": 55,
+      "exit": 20,
+      "folds": [
+        {
+          "fold": 1,
+          "testStart": "2025-10-01",
+          "testEnd": "2026-01-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 0.8595907703287835,
+            "returnPct": -14.040922967121649,
+            "maxDrawdownPct": 19.278029651973412,
+            "observations": 2208,
+            "trades": 53,
+            "winRate": 0.32075471698113206,
+            "forcedEndLiquidations": 1,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.23296922604983303,
+                "trades": 13,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.24580254764797982,
+                "trades": 12,
+                "forcedEndLiquidations": 1
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.151860652696535,
+                "trades": 16,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.22895834393443557,
+                "trades": 12,
+                "forcedEndLiquidations": 0
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 0.8595907703287835,
+              "returnPct": -14.040922967121649,
+              "maxDrawdownPct": 19.278029651973412,
+              "observations": 2208,
+              "trades": 53,
+              "winRate": 0.32075471698113206,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.23296922604983303,
+                  "trades": 13,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.24580254764797982,
+                  "trades": 12,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.151860652696535,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.22895834393443557,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 0.854026453027859,
+              "returnPct": -14.597354697214104,
+              "maxDrawdownPct": 19.765901624986487,
+              "observations": 2208,
+              "trades": 53,
+              "winRate": 0.3018867924528302,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.23145851932470726,
+                  "trades": 13,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.24433086410087243,
+                  "trades": 12,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.15064955860251183,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.22758751099976735,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 0.8484972304489561,
+              "returnPct": -15.150276955104392,
+              "maxDrawdownPct": 20.250902185984692,
+              "observations": 2208,
+              "trades": 53,
+              "winRate": 0.3018867924528302,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.22995723446332247,
+                  "trades": 13,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.24286762687309288,
+                  "trades": 12,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.14944782353221828,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.22622454558032243,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fold": 2,
+          "testStart": "2026-01-01",
+          "testEnd": "2026-04-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 0.9949916753700421,
+            "returnPct": -0.5008324629957928,
+            "maxDrawdownPct": 11.606354204044921,
+            "observations": 2160,
+            "trades": 45,
+            "winRate": 0.35555555555555557,
+            "forcedEndLiquidations": 1,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.24651120246502145,
+                "trades": 12,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.2743678743732438,
+                "trades": 11,
+                "forcedEndLiquidations": 1
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.22530843883434087,
+                "trades": 12,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.24880415969743602,
+                "trades": 10,
+                "forcedEndLiquidations": 0
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 0.9949916753700421,
+              "returnPct": -0.5008324629957928,
+              "maxDrawdownPct": 11.606354204044921,
+              "observations": 2160,
+              "trades": 45,
+              "winRate": 0.35555555555555557,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.24651120246502145,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.2743678743732438,
+                  "trades": 11,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.22530843883434087,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.24880415969743602,
+                  "trades": 10,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 0.9894185735502807,
+              "returnPct": -1.0581426449719267,
+              "maxDrawdownPct": 11.913328805656416,
+              "observations": 2160,
+              "trades": 45,
+              "winRate": 0.35555555555555557,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.2450352760178922,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.272861678972906,
+                  "trades": 11,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.22395945882729965,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.247562159732183,
+                  "trades": 10,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 0.983875470562837,
+              "returnPct": -1.6124529437163027,
+              "maxDrawdownPct": 12.345817987336789,
+              "observations": 2160,
+              "trades": 45,
+              "winRate": 0.35555555555555557,
+              "forcedEndLiquidations": 1,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.24356782024103785,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.2713633782506345,
+                  "trades": 11,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.22261822091666797,
+                  "trades": 12,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.24632605115449666,
+                  "trades": 10,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fold": 3,
+          "testStart": "2026-04-01",
+          "testEnd": "2026-07-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 0.8124060439186068,
+            "returnPct": -18.759395608139318,
+            "maxDrawdownPct": 18.759395608139318,
+            "observations": 2184,
+            "trades": 62,
+            "winRate": 0.22580645161290322,
+            "forcedEndLiquidations": 0,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.2056036833895374,
+                "trades": 17,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.19336345187551257,
+                "trades": 15,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.20348067428584446,
+                "trades": 16,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.20995823436771233,
+                "trades": 14,
+                "forcedEndLiquidations": 0
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 0.8124060439186068,
+              "returnPct": -18.759395608139318,
+              "maxDrawdownPct": 18.759395608139318,
+              "observations": 2184,
+              "trades": 62,
+              "winRate": 0.22580645161290322,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.2056036833895374,
+                  "trades": 17,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.19336345187551257,
+                  "trades": 15,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.20348067428584446,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.20995823436771233,
+                  "trades": 14,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 0.8061296204033133,
+              "returnPct": -19.387037959668675,
+              "maxDrawdownPct": 19.387037959668675,
+              "observations": 2184,
+              "trades": 62,
+              "winRate": 0.20967741935483872,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.20386194094829843,
+                  "trades": 17,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.19191739019059662,
+                  "trades": 15,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.2018579086879123,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.20849238057650588,
+                  "trades": 14,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 0.7999003892129212,
+              "returnPct": -20.00996107870788,
+              "maxDrawdownPct": 20.00996107870788,
+              "observations": 2184,
+              "trades": 62,
+              "winRate": 0.20967741935483872,
+              "forcedEndLiquidations": 0,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.20213452303440863,
+                  "trades": 17,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.19048178495739124,
+                  "trades": 15,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.20024768340523216,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.2070363978158891,
+                  "trades": 14,
+                  "forcedEndLiquidations": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fold": 4,
+          "testStart": "2026-07-01",
+          "testEnd": "2026-10-01",
+          "portfolio": {
+            "roundTripCostBps": 15,
+            "initialCapital": 1,
+            "finalEquity": 1.2043311057779278,
+            "returnPct": 20.433110577792778,
+            "maxDrawdownPct": 12.821385388318818,
+            "observations": 2208,
+            "trades": 60,
+            "winRate": 0.38333333333333336,
+            "forcedEndLiquidations": 2,
+            "perSymbol": [
+              {
+                "symbol": "BTCUSDT",
+                "finalSleeveEquity": 0.274036318222724,
+                "trades": 17,
+                "forcedEndLiquidations": 1
+              },
+              {
+                "symbol": "ETHUSDT",
+                "finalSleeveEquity": 0.27140037699375197,
+                "trades": 16,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "SOLUSDT",
+                "finalSleeveEquity": 0.3086280585824822,
+                "trades": 16,
+                "forcedEndLiquidations": 0
+              },
+              {
+                "symbol": "XRPUSDT",
+                "finalSleeveEquity": 0.35026635197896955,
+                "trades": 11,
+                "forcedEndLiquidations": 1
+              }
+            ]
+          },
+          "costSensitivity": [
+            {
+              "roundTripCostBps": 15,
+              "initialCapital": 1,
+              "finalEquity": 1.2043311057779278,
+              "returnPct": 20.433110577792778,
+              "maxDrawdownPct": 12.821385388318818,
+              "observations": 2208,
+              "trades": 60,
+              "winRate": 0.38333333333333336,
+              "forcedEndLiquidations": 2,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.274036318222724,
+                  "trades": 17,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.27140037699375197,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.3086280585824822,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.35026635197896955,
+                  "trades": 11,
+                  "forcedEndLiquidations": 1
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 20,
+              "initialCapital": 1,
+              "finalEquity": 1.195461043879276,
+              "returnPct": 19.54610438792761,
+              "maxDrawdownPct": 12.996132561125497,
+              "observations": 2208,
+              "trades": 60,
+              "winRate": 0.38333333333333336,
+              "forcedEndLiquidations": 2,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.2717148584219039,
+                  "trades": 17,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.26923594935659656,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.3061667388636341,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.3483434972371415,
+                  "trades": 11,
+                  "forcedEndLiquidations": 1
+                }
+              ]
+            },
+            {
+              "roundTripCostBps": 25,
+              "initialCapital": 1,
+              "finalEquity": 1.1866558994207534,
+              "returnPct": 18.665589942075343,
+              "maxDrawdownPct": 13.17053774482283,
+              "observations": 2208,
+              "trades": 60,
+              "winRate": 0.36666666666666664,
+              "forcedEndLiquidations": 2,
+              "perSymbol": [
+                {
+                  "symbol": "BTCUSDT",
+                  "finalSleeveEquity": 0.2694124908896183,
+                  "trades": 17,
+                  "forcedEndLiquidations": 1
+                },
+                {
+                  "symbol": "ETHUSDT",
+                  "finalSleeveEquity": 0.2670882478596461,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "SOLUSDT",
+                  "finalSleeveEquity": 0.30372443959065304,
+                  "trades": 16,
+                  "forcedEndLiquidations": 0
+                },
+                {
+                  "symbol": "XRPUSDT",
+                  "finalSleeveEquity": 0.346430721080836,
+                  "trades": 11,
+                  "forcedEndLiquidations": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "positiveOosFolds": 1,
+      "methodology": "Finite-capital spot portfolio, four equal 25% independent sleeves, no leverage. Each sleeve buys only with its own cash, charges half the round-trip cost on entry and half on exit, marks equity hourly and liquidates remaining exposure at the last in-window close with exit cost. Fixed parameters; chronological OOS quarters."
+    }
+  ]
+}

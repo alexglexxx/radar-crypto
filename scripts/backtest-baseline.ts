@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { calculateFeatures, type Candle, type FeatureSet } from '../lib/features'
 import { calculateRadarScore } from '../lib/scoring'
+import { completedMonthsWindow, loadArchivedCandles, monthKeys, type ArchiveFile } from './research/binance-archive'
 
 const exec = promisify(execFile)
 
@@ -87,6 +88,7 @@ interface BacktestReport {
     timeframes: HorizonName[]
     target_months: number
     actual_months_available: number
+    archive_files: ArchiveFile[]
   }
   methodology: {
     no_lookahead: boolean
@@ -182,29 +184,11 @@ const TARGET_MONTHS = 36
 const FEE_BPS_REALISTIC = 10 // Typical maker fee on Binance
 const SLIPPAGE_BPS_CONSERVATIVE = 5 // Conservative mid-to-market slippage
 
-const DATA_DIR = path.join(process.cwd(), '.backtest-cache')
 const REPORT_DIR = path.join(process.cwd(), 'reports')
 
 // ============================================================================
 // UTILITIES
 // ============================================================================
-
-function monthKeys(start: Date, end: Date): string[] {
-  const output: string[] = []
-  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1))
-  const finish = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1))
-  while (cursor <= finish) {
-    output.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}`)
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1)
-  }
-  return output
-}
-
-function nowMinusMonths(months: number): Date {
-  const d = new Date()
-  d.setUTCMonth(d.getUTCMonth() - months)
-  return d
-}
 
 function dateToMonthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
@@ -333,75 +317,12 @@ function computeMetricsFromReturns(values: number[]): SummaryMetrics {
 // DATA DOWNLOAD & PARSING
 // ============================================================================
 
-async function downloadMonth(symbol: string, monthKey: string): Promise<string | null> {
-  const file = path.join(DATA_DIR, `${symbol}-${INTERVAL}-${monthKey}.zip`)
-  try {
-    await fs.access(file)
-    return file
-  } catch {}
-
-  const url = `https://data.binance.vision/data/spot/monthly/klines/${symbol}/${INTERVAL}/${symbol}-${INTERVAL}-${monthKey}.zip`
-  const res = await fetch(url)
-  if (res.status === 404) {
-    console.warn(`[backtest] Binance archive unavailable (404), skipping ${symbol} ${monthKey}`)
-    return null
-  }
-  if (!res.ok) throw new Error(`Binance archive ${res.status}: ${url}`)
-  const bytes = Buffer.from(await res.arrayBuffer())
-  await fs.mkdir(DATA_DIR, { recursive: true })
-  await fs.writeFile(file, bytes)
-  return file
-}
-
-async function unzipCsv(zipFile: string): Promise<Candle[]> {
-  const tempDir = path.join(DATA_DIR, `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`)
-  await fs.mkdir(tempDir, { recursive: true })
-
-  await exec('unzip', ['-oq', zipFile, '-d', tempDir])
-
-  const files = (await fs.readdir(tempDir)).filter(f => f.endsWith('.csv'))
-  if (!files.length) throw new Error(`No CSV inside ${zipFile}`)
-
-  const csv = await fs.readFile(path.join(tempDir, files[0]), 'utf8')
-  const lines = csv.trim().split(/\r?\n/)
-  const startIndex = lines[0]?.toLowerCase().includes('open time') ? 1 : 0
-  const candles: Candle[] = []
-
-  for (let i = startIndex; i < lines.length; i++) {
-    const row = lines[i].split(',')
-    if (row.length < 6) continue
-    const [openTimeRaw, openRaw, highRaw, lowRaw, closeRaw, volumeRaw] = row
-    const rawOpenTime = Number(openTimeRaw)
-    const openTime = rawOpenTime > 1e14 ? Math.floor(rawOpenTime / 1000) : rawOpenTime
-    const open = Number(openRaw)
-    const high = Number(highRaw)
-    const low = Number(lowRaw)
-    const close = Number(closeRaw)
-    const volume = Number(volumeRaw)
-
-    if ([openTime, open, high, low, close, volume].every(Number.isFinite)) {
-      candles.push({ openTime, open, high, low, close, volume })
-    }
-  }
-
-  await fs.rm(tempDir, { recursive: true, force: true })
-  return candles
-}
+const archiveFiles: ArchiveFile[] = []
 
 async function loadSymbol(symbol: string, startMs: number, endMs: number): Promise<Candle[]> {
-  const months = monthKeys(new Date(startMs), new Date(endMs))
-  const candles: Candle[] = []
-
-  for (const monthKey of months) {
-    const zipFile = await downloadMonth(symbol, monthKey)
-    if (!zipFile) continue
-    const monthCandles = await unzipCsv(zipFile)
-    candles.push(...monthCandles)
-  }
-
+  const { candles, manifest } = await loadArchivedCandles(symbol, startMs, endMs, { interval: INTERVAL })
+  archiveFiles.push(...manifest)
   return candles
-    .filter(c => c.openTime >= startMs && c.openTime <= endMs)
-    .sort((a, b) => a.openTime - b.openTime)
 }
 
 // ============================================================================
@@ -572,10 +493,9 @@ class IncrementalFeatureEngine {
 // ============================================================================
 
 async function runBacktest(): Promise<BacktestReport> {
-  const startDate = nowMinusMonths(TARGET_MONTHS)
-  const endDate = new Date()
-  const startMs = startDate.getTime()
-  const endMs = endDate.getTime()
+  const { startMs, endMs } = completedMonthsWindow(TARGET_MONTHS)
+  const startDate = new Date(startMs)
+  const endDate = new Date(endMs)
 
   console.log(`[backtest] Loading data from ${startDate.toISOString()} to ${endDate.toISOString()}`)
 
@@ -938,7 +858,8 @@ async function runBacktest(): Promise<BacktestReport> {
       interval: INTERVAL,
       timeframes: HORIZONS,
       target_months: TARGET_MONTHS,
-      actual_months_available: monthKeys(startDate, endDate).length,
+      actual_months_available: monthKeys(startMs, endMs).length,
+      archive_files: archiveFiles,
     },
     methodology: {
       no_lookahead: true,
