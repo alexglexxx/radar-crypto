@@ -3,8 +3,8 @@ import { type Candle } from '../lib/features'
 import { BAR_MS } from '../scripts/research/live-baseline-core'
 import {
   GATE_V2_RULES, applyOnePosition, buildTradeTable, decisionTime, definitionHash, evaluateSwingCandidate,
-  shiftPValue, simulateTrade, windowContext, type SwingCandidate, type SwingContext, type SwingStage,
-  type SwingTrade, type TradeTable,
+  firstIndexAtOrAfter, freezeContext, outageDrill, shiftPValue, simulateTrade, windowContext, type SwingCandidate,
+  type SwingContext, type SwingStage, type SwingTrade, type TradeTable,
 } from '../scripts/research/swing-gate'
 import { SWING_CANDIDATES } from '../scripts/research/swing-candidates'
 
@@ -83,6 +83,23 @@ describe('simulateTrade', () => {
     const c = flat(I + 100)
     patch(c, I + 5, { high: 110 })
     expect(simulateTrade(c, I)).toBeNull()
+  })
+})
+
+describe('firstIndexAtOrAfter', () => {
+  it('finds the first candle at or after a time, across an outage', () => {
+    const c = flat(100)
+    c.splice(40, 18)
+    expect(firstIndexAtOrAfter(c, START)).toBe(0)
+    expect(firstIndexAtOrAfter(c, START - 1)).toBe(0)
+    expect(firstIndexAtOrAfter(c, START + 10 * BAR_MS)).toBe(10)
+    expect(firstIndexAtOrAfter(c, START + 10 * BAR_MS + 1)).toBe(11)
+    // Inside the outage the next existing candle is the first after it.
+    expect(firstIndexAtOrAfter(c, START + 45 * BAR_MS)).toBe(40)
+    expect(c[40].openTime).toBe(START + 58 * BAR_MS)
+    expect(firstIndexAtOrAfter(c, START + 99 * BAR_MS)).toBe(81)
+    expect(firstIndexAtOrAfter(c, START + 100 * BAR_MS)).toBe(82)
+    expect(firstIndexAtOrAfter([], START)).toBe(0)
   })
 })
 
@@ -307,12 +324,87 @@ describe('swing gate evaluation', () => {
       periodEnd: PERIOD_END, yearStarts: [PERIOD_END], rules: RULES })).toThrow(/No decision points/)
   })
 
+  it('aborts when the candidate throws in the main pass', () => {
+    const thrower: SwingCandidate = {
+      id: 'thrower', kind: 'control', hypothesis: 'Lanza un error.',
+      decide: (ctx, s, i) => { if (i > WARMUP + 500) throw new Error('boom in decide'); return false },
+    }
+    expect(() => run(thrower, PLAIN)).toThrow(/boom in decide/)
+  })
+
   it('keeps the same hash for the same definition', () => {
     const hash = definitionHash(spike)
     expect(hash).toMatch(/^[0-9a-f]{12}$/)
     expect(definitionHash({ ...spike })).toBe(hash)
     expect(definitionHash({ ...spike, decide: (ctx, s, i) => ctx.candles.get(s)![i].volume > 6 })).not.toBe(hash)
     expect(definitionHash({ ...spike, hypothesis: 'otra' })).not.toBe(hash)
+  })
+})
+
+describe('freezeContext', () => {
+  it('stops a candidate from mutating data the next candidate reads', () => {
+    const ctx = freezeContext({
+      candles: new Map([['BTCUSDT', flat(10)]]),
+      funding: new Map([['BTCUSDT', [{ calcTime: START, intervalHours: 8, rate: 0.0001 }]]]),
+    })
+    const candles = ctx.candles.get('BTCUSDT')!, funding = ctx.funding.get('BTCUSDT')!
+    expect(() => { candles[0].close = 1 }).toThrow(TypeError)
+    expect(() => { candles.push(candles[0]) }).toThrow(TypeError)
+    expect(() => { candles.sort((a, b) => b.openTime - a.openTime) }).toThrow(TypeError)
+    expect(() => { funding[0].rate = 1 }).toThrow(TypeError)
+    expect(() => { funding.pop() }).toThrow(TypeError)
+    expect(candles[0].close).toBe(100)
+    expect(windowContext(ctx, 9).ctx.candles.get('BTCUSDT')!.length).toBe(10)
+  })
+})
+
+describe('outageDrill', () => {
+  const DAY = 24 * HOUR
+  // Exam-like outages three years before the synthetic market; shifted +3 years they land in it.
+  const shiftedFrom = (iso: string) => { const d = new Date(iso); d.setUTCFullYear(d.getUTCFullYear() + 3); return d.getTime() }
+  const outages = [
+    { from: '2021-03-10T04:15:00.000Z', to: '2021-03-10T08:30:00.000Z', bars: 18 },
+    { from: '2021-08-13T01:00:00.000Z', to: '2021-08-13T05:15:00.000Z', bars: 18 },
+  ]
+  const options = { periodStart: PERIOD_START, periodEnd: PERIOD_END, rules: RULES }
+  const byCandles: SwingCandidate = {
+    id: 'counts-candles', kind: 'strategy', hypothesis: 'Compara con la vela de hace 2879 velas.',
+    decide: (ctx, s, i) => ctx.candles.get(s)![i].close > ctx.candles.get(s)![i - 2879].close,
+  }
+  const byTime: SwingCandidate = {
+    id: 'reads-by-time', kind: 'strategy', hypothesis: 'Compara con la primera vela de los últimos 30 días.',
+    decide: (ctx, s, i) => {
+      const c = ctx.candles.get(s)!
+      return c[i].close > c[firstIndexAtOrAfter(c, decisionTime(c[i]) - 30 * DAY)].close
+    },
+  }
+
+  it('shifts each outage by three years and removes it from every coin', () => {
+    expect(shiftedFrom(outages[0].from)).toBe(Date.UTC(2024, 2, 10, 4, 15))
+    const drill = outageDrill(byTime, PLAIN, outages, options)
+    expect(drill.removed).toBe(36)
+    expect(PLAIN.candles.get('BTCUSDT')!.length).toBe(LENGTH)
+  })
+
+  it('catches a candidate that counts 30 days by candles', () => {
+    // Without outages the same candidate never diverges, as on development data.
+    expect(outageDrill(byCandles, PLAIN, [], options).leaks).toBe(0)
+    const drill = outageDrill(byCandles, PLAIN, outages, options)
+    expect(drill.checks).toBeGreaterThan(0)
+    expect(drill.leaks).toBeGreaterThan(0)
+  })
+
+  it('passes a candidate that reads the window by time', () => {
+    const drill = outageDrill(byTime, PLAIN, outages, options)
+    expect(drill.checks).toBeGreaterThan(150)
+    expect(drill.leaks).toBe(0)
+  })
+
+  it('counts a throw on the full context as a divergence', () => {
+    // Shifted into the warm-up, the outage pulls the first decision below index 2879.
+    const early = [{ from: '2021-01-05T00:00:00.000Z', to: '2021-01-05T04:15:00.000Z', bars: 18 }]
+    expect(outageDrill(byCandles, PLAIN, early, options).leaks).toBeGreaterThan(0)
+    expect(outageDrill(byTime, PLAIN, early, options).leaks).toBe(0)
   })
 })
 

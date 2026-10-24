@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { type Candle } from '../../lib/features'
 import { BAR_MS, mean } from './live-baseline-core'
 import { type FundingPoint } from './funding-archive'
+import { type Outage } from './historical-coverage'
 import { pct, type Check } from './evaluation-gate'
 
 const HOUR_MS = 3_600_000
@@ -17,7 +18,7 @@ export type SwingRules = {
 // moves from the entry price; with the 0.2 % round-trip cost they are +4 % / -4 % net.
 export const GATE_V2_RULES: Readonly<SwingRules> = {
   version: 'gate-v2',
-  execution: 'la decisión se toma al cierre de cada vela de 4h; se compra en la apertura de la vela siguiente y se vende al tocar +4 % neto (TP) o −4 % neto (SL), o a las 72 h en la apertura; si una vela toca ambos niveles cuenta el SL.',
+  execution: 'la decisión se toma al cierre de cada vela de 4h; se compra en la apertura de la vela siguiente y se vende al tocar +4 % neto (TP) o −4 % neto (SL), o a las 72 h en la apertura; si una vela toca ambos niveles cuenta el SL. El SL se vende en min(SL, apertura): una vela que abre por debajo del SL (hueco a la baja) se vende en su apertura y puede perder más de −4 %.',
   decisionEveryMs: 4 * HOUR_MS,
   takeProfit: 0.042,
   stopLoss: 0.038,
@@ -52,6 +53,25 @@ export type SwingTrade = {
 }
 
 export const decisionTime = (c: Candle) => c.openTime + BAR_MS
+
+// Index of the first candle with openTime >= time, or candles.length if none.
+// Windows must be read by time: exchange outages remove candles, so counting
+// candles back from index reaches further than the same number of days.
+export function firstIndexAtOrAfter(candles: Candle[], time: number): number {
+  let lo = 0, hi = candles.length
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (candles[mid].openTime >= time) hi = mid; else lo = mid + 1 }
+  return lo
+}
+
+// Freezes every candle, funding point and series in place, so one candidate
+// cannot change the data that the next candidate (or the leak check) reads.
+export function freezeContext(ctx: SwingContext): SwingContext {
+  for (const series of [...ctx.candles.values(), ...ctx.funding.values()]) {
+    for (const item of series) Object.freeze(item)
+    Object.freeze(series)
+  }
+  return ctx
+}
 
 // Enters at the open of the next existing candle; the 72 h limit counts by clock from that open.
 export function simulateTrade(candles: Candle[], i: number, rules: SwingRules = GATE_V2_RULES): SwingTrade | null {
@@ -120,8 +140,7 @@ export function definitionHash(candidate: SwingCandidate): string {
 export function windowContext(ctx: SwingContext, index: number, rules: SwingRules = GATE_V2_RULES) {
   const grid = ctx.candles.values().next().value as Candle[]
   const t = decisionTime(grid[index]), from = t - rules.lookbackMs
-  let lo = 0, hi = index
-  while (lo < hi) { const mid = (lo + hi) >> 1; if (grid[mid].openTime >= from) hi = mid; else lo = mid + 1 }
+  const lo = firstIndexAtOrAfter(grid, from)
   const candles = new Map([...ctx.candles].map(([s, c]) => [s, c.slice(lo, index + 1)]))
   const funding = new Map([...ctx.funding].map(([s, f]) => [s, f.filter(p => p.calcTime > from && p.calcTime <= t)]))
   return { ctx: { candles, funding } as SwingContext, index: index - lo }
@@ -159,6 +178,50 @@ const rates = (trades: SwingTrade[]): Rates => ({
 function sameDecision(candidate: SwingCandidate, ctx: SwingContext, symbol: string, index: number, rules: SwingRules) {
   const window = windowContext(ctx, index, rules)
   try { return candidate.decide(ctx, symbol, index) === candidate.decide(window.ctx, symbol, window.index) } catch { return false }
+}
+
+// The no-lookahead comparison, shared by the evaluation and the outage drill.
+// Up to leakChecksPerAsset distinct points per coin: half spread over every
+// decision point, half over the decisions where the candidate buys.
+export function countLeaks(candidate: SwingCandidate, ctx: SwingContext, tables: Map<string, TradeTable>,
+  selected: Map<string, boolean[]>, rules: SwingRules = GATE_V2_RULES) {
+  let checks = 0, leaks = 0
+  const spread = (items: number[], count: number) => {
+    const length = Math.min(count, items.length)
+    return Array.from({ length }, (_, k) => items[Math.floor((k + 0.5) * items.length / length)])
+  }
+  for (const [symbol, sel] of selected) {
+    const { trades } = tables.get(symbol)!
+    const all = trades.map((_, k) => k), buys = all.filter(k => sel[k])
+    const half = Math.floor(rules.leakChecksPerAsset / 2)
+    for (const k of new Set([...spread(all, half), ...spread(buys, rules.leakChecksPerAsset - half)])) {
+      checks++
+      if (!sameDecision(candidate, ctx, symbol, trades[k].decisionIndex, rules)) leaks++
+    }
+  }
+  return { checks, leaks }
+}
+
+// Exam precondition: the exam's shared outages, moved +3 years (same UTC time of
+// day) onto development data, are removed from every coin and only the no-lookahead
+// comparison runs on that copy. A candidate that counts candles instead of reading
+// by time diverges here, before it can spend its single exam on that alone.
+// A throw while deciding on the copy counts as a divergence too.
+export function outageDrill(candidate: SwingCandidate, ctx: SwingContext, outages: Outage[],
+  { periodStart, periodEnd, rules = GATE_V2_RULES }: { periodStart: number; periodEnd: number; rules?: SwingRules }) {
+  const plus3 = (iso: string) => { const d = new Date(iso); d.setUTCFullYear(d.getUTCFullYear() + 3); return d.getTime() }
+  const drop = outages.map(o => [plus3(o.from), plus3(o.to)])
+  const keep = (c: Candle) => !drop.some(([from, to]) => c.openTime >= from && c.openTime <= to)
+  const drilled: SwingContext = { candles: new Map([...ctx.candles].map(([s, c]) => [s, c.filter(keep)])), funding: ctx.funding }
+  const symbols = [...drilled.candles.keys()]
+  const tables = new Map(symbols.map(s => [s, buildTradeTable(drilled.candles.get(s)!, periodStart, periodEnd, rules)]))
+  let throws = 0
+  const selected = new Map(symbols.map(s => [s, tables.get(s)!.trades.map(t => {
+    try { return candidate.decide(drilled, s, t.decisionIndex) } catch { throws++; return false }
+  })]))
+  const { checks, leaks } = countLeaks(candidate, drilled, tables, selected, rules)
+  const first = symbols[0]
+  return { removed: ctx.candles.get(first)!.length - drilled.candles.get(first)!.length, checks, leaks: leaks + throws }
 }
 
 // Pooled excess of the trades taken from a selection, summed in coin order and then
@@ -226,21 +289,7 @@ export function evaluateSwingCandidate(candidate: SwingCandidate, ctx: SwingCont
   }
 
   // 2. Lookahead: the decision must not change when every series keeps only the lookback.
-  // Half the sample spreads over every decision point, half over the candidate's buys.
-  let leakChecks = 0, leaks = 0
-  const spread = (items: number[], count: number) => {
-    const length = Math.min(count, items.length)
-    return Array.from({ length }, (_, k) => items[Math.floor((k + 0.5) * items.length / length)])
-  }
-  for (const symbol of symbols) {
-    const { trades } = tables.get(symbol)!, sel = selected.get(symbol)!
-    const all = trades.map((_, k) => k), buys = all.filter(k => sel[k])
-    const half = Math.floor(rules.leakChecksPerAsset / 2)
-    for (const k of new Set([...spread(all, half), ...spread(buys, rules.leakChecksPerAsset - half)])) {
-      leakChecks++
-      if (!sameDecision(candidate, ctx, symbol, trades[k].decisionIndex, rules)) leaks++
-    }
-  }
+  const { checks: leakChecks, leaks } = countLeaks(candidate, ctx, tables, selected, rules)
 
   const excessOf = (group: Taken[], base: (t: Taken) => number) =>
     group.length ? mean(group.map(t => t.trade.net)) - mean(group.map(base)) : null
