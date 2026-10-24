@@ -1,6 +1,6 @@
 # Diseño: gate-v2 para operaciones de hasta 3 días con TP/SL
 
-Fecha: 2026-10-24 · Estado: pendiente de revisión de Alex · Rama: `work/security-baseline-audit-20261021`
+Fecha: 2026-10-24 · Estado: aprobado por Alex el 2026-10-24 · Rama: `work/security-baseline-audit-20261021`
 
 ## 1. Propósito
 
@@ -42,12 +42,13 @@ Cobertura de datos verificada por HTTP el 2026-10-24 en `data.binance.vision`: f
 - **Momento de decisión:** cierre de cada vela de 4h UTC (00, 04, 08, 12, 16, 20), es decir la vela de 15m `i` cuyo `openTime + 15m` es múltiplo de 4h.
 - **Entrada:** apertura de la vela `i+1`, precio `E`.
 - **Niveles**, definidos con el coste base de 20 bps: TP en `E × 1.042` (+4 % neto), SL en `E × 0.962` (−4 % neto).
-- **Recorrido:** velas `j = i+1 … i+288` (72 h). En cada vela se mira primero el SL y después el TP: si `low ≤ SL` sale por SL; si no, si `high ≥ TP` sale por TP. Si una misma vela toca los dos, cuenta el SL.
-- **Precio de salida:** TP se llena en el nivel TP. SL se llena en `min(SL, open_j)`: un hueco a la baja se paga completo.
-- **Tiempo:** si no tocó ninguno, sale en la apertura de la vela `i+289`.
+- **Recorrido:** las 72 h se cuentan por reloj desde la apertura de la vela de entrada, no por número de velas. Se recorren las velas `j ≥ i+1` con `openTime_j < openTime_{i+1} + 72 h` (sin huecos, `j = i+1 … i+288`). En cada vela se mira primero el SL y después el TP: si `low ≤ SL` sale por SL; si no, si `high ≥ TP` sale por TP. Si una misma vela toca los dos, cuenta el SL.
+- **Precio de salida:** TP se llena en el nivel TP. SL se llena en `min(SL, open_j)`: un hueco a la baja, incluido el de una caída del exchange, se paga completo.
+- **Tiempo:** si no tocó ninguno, sale en la apertura de la primera vela con `openTime ≥ openTime_{i+1} + 72 h` (sin huecos, `i+289`).
+- **Caídas del exchange:** si falta la vela de 4h, en ese momento no hay decisión. Si la caída empieza justo después de la decisión, se entra en la apertura de la primera vela que vuelve a existir, como pasaría en la realidad.
 - **Retorno neto:** `(salida − E) / E − coste`. Con estrés se resta 30 bps en lugar de 20; los niveles no cambian.
 - **Una posición por moneda:** tras entrar en `i`, la siguiente decisión válida es el primer cierre de 4h en o después del cierre de la vela de salida. Las señales intermedias se ignoran.
-- **Cola reservada:** las últimas 289 velas del periodo no generan decisiones.
+- **Cola reservada:** una decisión solo cuenta si la vela de entrada y la de salida por tiempo existen en los datos cargados (sin huecos: las últimas 289 velas del periodo no generan decisiones).
 
 ### 3.2 Comparación con el azar
 
@@ -60,7 +61,7 @@ Cobertura de datos verificada por HTTP el 2026-10-24 en `data.binance.vision`: f
 
 | Id | Prueba | Exigido |
 | --- | --- | --- |
-| `no-lookahead` | No mira el futuro | 0 cambios en 200 momentos de decisión por moneda al cortar **todas** las series en el instante de la decisión |
+| `no-lookahead` | No mira el futuro (ni más de 30 días atrás) | 0 cambios en 200 momentos de decisión por moneda al dejar **todas** las series solo con lo publicado en los 30 días que terminan en el instante de la decisión |
 | `sample` | Muestra | ≥ 200 operaciones en el periodo |
 | `beats-random` | Le gana al azar | Exceso > 0 y p < 0.05 |
 | `net-of-costs` | Gana después de comisiones | Media neta > 0 con 20 bps (se informa 30 bps) |
@@ -78,7 +79,7 @@ Cada año se compara con el azar de la misma moneda dentro de ese año. La ficha
 | `desarrollo` | 2023-10 .. 2026-09 | 2023-10..2024-09, 2024-10..2025-09, 2025-10..2026-09 | desde 2023-09 | ilimitadas, todas registradas |
 | `examen` | 2020-10 .. 2023-09 | 2020-10..2021-09, 2021-10..2022-09, 2022-10..2023-09 | desde 2020-09 | una por candidato |
 
-- El mes anterior al periodo es calentamiento: **ningún candidato puede mirar más de 30 días (2880 velas de 15m) hacia atrás.** Las decisiones empiezan en el índice 2880 del periodo cargado.
+- El mes anterior al periodo es calentamiento: **ningún candidato puede mirar más de 30 días hacia atrás.** Las decisiones empiezan con el primer cierre de 4h del periodo (00:00 UTC del primer día), y `no-lookahead` corta el contexto también por delante para comprobarlo.
 - El periodo lo fija la etapa; el comando no acepta otro.
 - **Tope de desarrollo:** como máximo 20 candidatos de estrategia distintos bajo `gate-v2` en desarrollo. Los controles no cuentan. El comando rechaza el número 21.
 - **Huella de definición:** cada corrida registra `definition`, los primeros 12 caracteres del SHA-256 de `hypothesis` + `decide.toString()`. Cambiar la definición de un candidato exige un id nuevo; el comando aborta si un id ya registrado aparece con otra huella.
@@ -89,7 +90,8 @@ Cada año se compara con el azar de la misma moneda dentro de ese año. La ficha
 
 ## 4. Datos
 
-- **Spot 15m:** `scripts/research/binance-archive.ts` sin cambios de comportamiento (SHA-256 por archivo, aborta si falta un mes o hay velas inválidas, caché `.backtest-cache`). Los 4 activos deben compartir la misma rejilla de tiempo.
+- **Spot 15m:** `scripts/research/binance-archive.ts` sin cambios de comportamiento para gate-v1 (SHA-256 por archivo, aborta si falta un mes o hay velas inválidas, caché `.backtest-cache`). Los 4 activos deben compartir la misma rejilla de tiempo.
+- **Caídas del exchange (decisión de Alex, 2026-10-24):** el examen tiene 10 caídas de Binance que faltan a la vez en las 4 monedas (93 velas; la mayor, 18 velas el 2021-04-25 y el 2021-08-13). Desarrollo no tiene ninguna. gate-v2 acepta un hueco solo si es idéntico en las 4 monedas y dura ≤ 24 velas (6 h); cualquier otro hueco aborta. La ficha lista las caídas aceptadas. Se contaron solo marcas de tiempo, sin leer precios del examen.
 - **Funding:** cargador nuevo `scripts/research/funding-archive.ts` sobre `futures/um/monthly/fundingRate/<SYM>/<SYM>-fundingRate-<YYYY-MM>.zip`, con las mismas garantías y manifiesto. Columnas: `calc_time`, `funding_interval_hours`, `last_funding_rate`. Aborta si falta un mes o si entre dos liquidaciones hay más de 1.5 × `funding_interval_hours` (informa cuántos huecos). Respeta los cambios de intervalo (8h a 4h).
 - **Visibilidad:** en la decisión de la vela `i` (cierre `t`), un candidato ve las velas con cierre ≤ `t` de las 4 monedas y las liquidaciones de funding con `calc_time ≤ t`. El archivo solo trae funding liquidado, no el estimado en tiempo real.
 - **Open interest / long-short:** fuera de este diseño. Si un candidato los necesita, se añaden con su propio cargador y verificación de huecos.
@@ -155,7 +157,7 @@ Reutiliza de `live-baseline-core.ts` y `evaluation-gate.ts` lo que encaje (`mean
 
 ## 8. Errores
 
-- Mes faltante, fila ilegible o rejilla distinta entre monedas: aborta antes de evaluar.
+- Mes faltante, fila ilegible, rejilla distinta entre monedas o hueco que no es una caída compartida de ≤ 24 velas: aborta antes de evaluar.
 - Hueco de funding: aborta con el número de huecos y la primera fecha afectada.
 - Guardas de etapa incumplidas: aborta sin escribir ficha ni registro, con el motivo.
 - Un candidato que lanza error en la evaluación principal aborta la corrida (en la prueba de futuro cuenta como respuesta distinta).
