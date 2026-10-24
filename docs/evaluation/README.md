@@ -44,7 +44,7 @@ Cada corrida escribe:
 
 ## Reglas `gate-v2`
 
-Segundo gate, para candidatos de swing largo en spot (BTC, ETH, SOL y XRP). La decisión se toma al cierre de cada vela de 4h UTC con solo los últimos 30 días de velas de 15m y de funding; se compra en la apertura de la vela siguiente y se vende al tocar +4 % neto (TP) o −4 % neto (SL), o a las 72 h. Si una vela toca ambos niveles cuenta el SL. Comisión: 0.20 % de ida y vuelta (estrés 0.30 %). Una posición a la vez por moneda. Las reglas están en `scripts/research/swing-gate.ts` (`GATE_V2_RULES`).
+Segundo gate, para candidatos de swing largo en spot (BTC, ETH, SOL y XRP). La decisión se toma al cierre de cada vela de 4h UTC con solo los últimos 30 días de velas de 15m y de funding; se compra en la apertura de la vela siguiente y se vende al tocar +4 % neto (TP) o −4 % neto (SL), o a las 72 h. Si una vela toca ambos niveles cuenta el SL. El SL se vende en el nivel o en la apertura si es peor: una vela que abre por debajo del SL (hueco a la baja, también tras una caída del exchange) se vende en su apertura y la operación puede perder más de −4 %. Comisión: 0.20 % de ida y vuelta (estrés 0.30 %). Una posición a la vez por moneda. Las reglas están en `scripts/research/swing-gate.ts` (`GATE_V2_RULES`).
 
 | Prueba | Qué pregunta | Exigido |
 | --- | --- | --- |
@@ -55,9 +55,32 @@ Segundo gate, para candidatos de swing largo en spot (BTC, ETH, SOL y XRP). La d
 | `stable` | ¿Le gana al azar en cada año? | Exceso > 0 en 3 de 3 años |
 | `breadth` | ¿Le gana al azar en varias monedas? | Exceso > 0 en ≥ 3 de 4 monedas |
 
-**Etapas y límites.** `desarrollo` evalúa 2023-10 a 2026-09 (carga desde 2023-09 para tener historia previa; años desde 2023-10, 2024-10 y 2025-10): máximo 20 estrategias. `examen` evalúa 2020-10 a 2023-09 (años desde 2020-10, 2021-10 y 2022-10), años nunca mirados: máximo 3 candidatos, un examen por candidato, solo si su última fila de desarrollo es APRUEBA DESARROLLO, con el árbol de `scripts` y `lib` limpio. Los controles nunca pasan al examen. Un mismo id con otra definición se rechaza: un cambio de definición exige un id nuevo.
+La muestra de `no-lookahead` son hasta 200 puntos distintos por moneda: la mitad repartida sobre todos los momentos de decisión del periodo y la mitad sobre las compras del candidato (si un punto cae en ambas mitades cuenta una vez).
 
-**Caídas aceptadas.** Un hueco de datos se acepta solo si es idéntico en las 4 monedas y dura 24 velas o menos; cualquier otro aborta la corrida. Las caídas aceptadas se listan en la ficha.
+**Etapas y límites.** `desarrollo` evalúa 2023-10 a 2026-09 (carga desde 2023-09 para tener historia previa; años desde 2023-10, 2024-10 y 2025-10): máximo 20 estrategias. `examen` evalúa 2020-10 a 2023-09 (años desde 2020-10, 2021-10 y 2022-10), años nunca mirados: máximo 3 candidatos, un examen por candidato, solo si su última fila de desarrollo es APRUEBA DESARROLLO, con `scripts`, `lib` y `docs/evaluation/registry-v2.tsv` sin cambios pendientes de commit. Los controles nunca pasan al examen. Un mismo id con otra definición se rechaza: un cambio de definición exige un id nuevo.
+
+**Antes del examen** el comando comprueba, sin escribir nada, y aborta si algo falla:
+
+1. Reproducción del desarrollo: vuelve a evaluar el candidato en desarrollo con el código actual y exige que veredicto, operaciones, exceso, p y media neta coincidan exactamente con su última fila APRUEBA DESARROLLO. Así el examen juzga lo mismo que aprobó el desarrollo, aunque haya cambiado una función auxiliar, una constante o el propio gate. Esta reproducción se imprime y no se registra.
+2. Simulacro de caídas: toma las caídas del examen, las mueve +3 años (misma hora UTC) sobre los datos de desarrollo, quita esas velas de las 4 monedas y repite solo la prueba `no-lookahead`. Si cambia alguna decisión, el candidato cuenta velas en lugar de leer por tiempo y el examen se niega (corrígelo con un id nuevo).
+
+Tras escribir una fila de examen, haz commit de `registry-v2.tsv` y de la ficha enseguida: sin commit, descartar el registro permitiría repetir el examen.
+
+**Errores del candidato.** Si `decide` lanza un error en la evaluación principal, la corrida se aborta pero el intento queda escrito: fila RECHAZADO con las métricas vacías y una ficha con el mensaje de error. En el examen esa fila gasta el examen del candidato.
+
+**Caídas aceptadas.** Un hueco de datos se acepta solo si es idéntico en las 4 monedas y dura 24 velas o menos; cualquier otro aborta la corrida. Las caídas aceptadas y la primera y última liquidación de funding de cada moneda se listan en la ficha (en el examen el funding de SOL empieza el 2020-09-13). Desarrollo no tiene caídas; el examen tiene 10 (93 velas, la mayor de 18).
+
+**Leer por tiempo, no por número de velas.** Como el examen tiene caídas, "los últimos N días" no son siempre N × 96 velas: `candles[i − 2879]` está a 30 días en desarrollo y a más de 30 días tras una caída, donde `no-lookahead` falla. Busca el inicio de la ventana por hora con `firstIndexAtOrAfter` (en `swing-gate.ts`):
+
+```ts
+const DAY_MS = 24 * 3_600_000
+decide: (ctx, symbol, index) => {
+  const candles = ctx.candles.get(symbol)!
+  const from = firstIndexAtOrAfter(candles, decisionTime(candles[index]) - 10 * DAY_MS) // últimos 10 días
+  const high = Math.max(...candles.slice(from, index).map(c => c.high))
+  return candles[index].close > high
+}
+```
 
 **Controles.** `swing-random` (compra al azar; debe pasar `no-lookahead` y fallar `beats-random`), `swing-lookahead` (mira si la operación tocará TP; debe fallar `no-lookahead`) y `swing-btc-lookahead` (mira el cierre de BTC 24 h después; debe fallar `no-lookahead`). Los tres deben salir RECHAZADO; si no, el gate está mal.
 
@@ -69,11 +92,17 @@ Segundo gate, para candidatos de swing largo en spot (BTC, ETH, SOL y XRP). La d
 npx tsx scripts/research/run-gate-v2.mts --stage=desarrollo --candidates=swing-random,swing-lookahead,swing-btc-lookahead
 ```
 
-Ambos argumentos son obligatorios. Los candidatos viven en `scripts/research/swing-candidates.ts`. Cada corrida escribe:
+Ambos argumentos son obligatorios. Los candidatos viven en `scripts/research/swing-candidates.ts`. Las rutas salen de la raíz del repositorio, se ejecute desde donde se ejecute. Cada corrida escribe:
 
-- `fichas/<fecha>-<etapa>-<candidato>.md`: la ficha legible.
+- `fichas/<fecha>-<etapa>-<candidato>.md`: la ficha legible. Nunca se sobrescribe: si ya existe, se añade `-2`, `-3`, …
 - `registry-v2.tsv`: una fila por intento, cualquiera que sea el veredicto. No se borran filas.
 - `reports/gate-v2/<etapa>-<candidato>.json` (no versionado): resultado, contexto y manifiestos de velas y funding.
+
+Para revisar los datos de una etapa sin evaluar nada (descarga, valida velas, rejilla y funding, e imprime caídas y cobertura de funding por moneda; no escribe nada):
+
+```powershell
+npx tsx scripts/research/run-gate-v2.mts --stage=examen --check-data
+```
 
 ## Límite importante
 
