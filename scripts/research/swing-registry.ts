@@ -1,4 +1,5 @@
 import { type Outage } from './historical-coverage'
+import { type FundingPoint } from './funding-archive'
 import { pct } from './evaluation-gate'
 import {
   definitionHash, GATE_V2_RULES, type SwingCandidate, type SwingResult, type SwingRules, type SwingStage,
@@ -10,7 +11,34 @@ export const STAGES: Record<SwingStage, { loadFrom: string; periodFrom: string; 
   examen: { loadFrom: '2020-09', periodFrom: '2020-10', periodTo: '2023-09', years: ['2020-10', '2021-10', '2022-10'] },
 }
 
-export type SwingContextInfo = { period: string; commit: string; generatedAt: string; data: string; outages: Outage[] }
+const monthStart = (key: string, offset = 0) => {
+  const match = /^(\d{4})-(\d{2})$/.exec(key)
+  if (!match) throw new Error(`Month must be YYYY-MM: ${key}`)
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1 + offset, 1)
+}
+
+// UTC milliseconds of a stage: data loads [loadStart, loadEnd] by open time,
+// decisions fall in [periodStart, periodEnd) and each year starts at yearStarts.
+export function stageWindow(stage: SwingStage) {
+  const { loadFrom, periodFrom, periodTo, years } = STAGES[stage]
+  return {
+    loadStart: monthStart(loadFrom), loadEnd: monthStart(periodTo, 1) - 1,
+    periodStart: monthStart(periodFrom), periodEnd: monthStart(periodTo, 1),
+    yearStarts: years.map(y => monthStart(y)),
+  }
+}
+
+export type FundingCoverage = { symbol: string; first: string; last: string; points: number }
+
+export type SwingContextInfo = {
+  period: string; commit: string; generatedAt: string; data: string; outages: Outage[]; funding: FundingCoverage[]
+}
+
+// First and last settlement of each coin's loaded funding (SOL starts mid-month in the exam).
+export function fundingCoverage(funding: Map<string, FundingPoint[]>): FundingCoverage[] {
+  return [...funding].map(([symbol, points]) => ({ symbol, points: points.length,
+    first: new Date(points[0]?.calcTime ?? NaN).toISOString(), last: new Date(points.at(-1)?.calcTime ?? NaN).toISOString() }))
+}
 
 const COLUMNS = ['date', 'candidate', 'kind', 'stage', 'rules', 'period', 'commit', 'definition', 'verdict', 'trades',
   'excess', 'p_outperformance', 'net_cost', 'tp_rate', 'sl_rate', 'timeout_rate', 'leak_divergences'] as const
@@ -37,6 +65,37 @@ export function swingRegistryRow(result: SwingResult, info: SwingContextInfo): s
     num(m.net_cost), num(m.tp_rate), num(m.sl_rate), num(m.timeout_rate), m.leak_divergences].join('\t')
 }
 
+// The row of a run that aborted because the candidate threw: the attempt still counts.
+export function swingErrorRow(candidate: SwingCandidate, stage: SwingStage, info: SwingContextInfo,
+  rules: SwingRules = GATE_V2_RULES): string {
+  return [info.generatedAt, candidate.id, candidate.kind, stage, rules.version, info.period, info.commit,
+    definitionHash(candidate), 'RECHAZADO', ...Array(COLUMNS.length - 9).fill('')].join('\t')
+}
+
+const REPRODUCED = ['verdict', 'trades', 'excess', 'p_outperformance', 'net_cost'] as const
+
+// Exam precondition: development, evaluated again with the current code, must give
+// exactly the registered approved row, so the exam judges what development approved.
+export function assertDevelopmentReproduced(row: RegistryV2Row, result: SwingResult, info: SwingContextInfo): void {
+  if (row.candidate !== result.candidate.id) throw new Error(`Registry row of ${row.candidate} compared with ${result.candidate.id}`)
+  const [fresh] = parseRegistryV2(REGISTRY_V2_HEADER + '\n' + swingRegistryRow(result, info))
+  for (const field of REPRODUCED) {
+    if (fresh[field] !== row[field]) {
+      throw new Error(`Development of ${row.candidate} does not reproduce with the current code: ${field} is ` +
+        `${fresh[field] || '(empty)'}, registered ${row[field] || '(empty)'}. Code, rules or helpers changed since it was approved`)
+    }
+  }
+}
+
+// Never overwrites a fiche: adds -2, -3, ... before .md.
+export function freeFichePath(file: string, exists: (path: string) => boolean): string {
+  if (!exists(file)) return file
+  for (let n = 2; ; n++) {
+    const next = file.replace(/\.md$/, `-${n}.md`)
+    if (!exists(next)) return next
+  }
+}
+
 const closing = (result: SwingResult) =>
   result.verdict === 'RECHAZADO'
     ? 'Rechazado: no pasa todas las pruebas. No se usa para operar ni se ajusta mirando estos mismos datos.'
@@ -44,18 +103,37 @@ const closing = (result: SwingResult) =>
       ? 'Pasa el desarrollo. Puede pasar al examen único sobre años nunca mirados.'
       : 'Pasa el examen. Siguiente paso: seguimiento en papel con datos nuevos antes de cualquier uso real.'
 
+type FicheHead = { id: string; kind: SwingCandidate['kind']; hypothesis: string; definition: string; stage: SwingStage; verdict: string }
+const ficheHeader = (c: FicheHead, rules: SwingRules, info: SwingContextInfo) => [
+  `# Ficha de evaluación: ${c.id}`,
+  '',
+  `**Veredicto: ${c.verdict}**${c.kind === 'control' ? ' · control del gate, no es una estrategia' : ''}`,
+  '',
+  `- Idea evaluada: ${c.hypothesis}`,
+  `- Etapa: ${c.stage} · Periodo: ${info.period} · Datos: ${info.data}`,
+  `- Reglas: ${rules.version} · Commit: \`${info.commit}\` · Huella de la definición: \`${c.definition}\` · Generado: ${info.generatedAt}`,
+  '',
+]
+
+const stamp = (iso: string) => iso.slice(0, 19).replace('T', ' ')
+const dataSections = (info: SwingContextInfo) => [
+  '**Caídas aceptadas** (huecos de datos idénticos en las 4 monedas)',
+  '',
+  ...(info.outages.length
+    ? info.outages.map(o => `- ${o.from.slice(0, 16).replace('T', ' ')} → ${o.to.slice(0, 16).replace('T', ' ')} (${o.bars} velas)`)
+    : ['Ninguna']),
+  '',
+  '**Funding cargado** (primera y última liquidación de cada moneda, UTC)',
+  '',
+  ...info.funding.map(f => `- ${f.symbol.replace('USDT', '')}: ${stamp(f.first)} → ${stamp(f.last)} (${f.points} liquidaciones)`),
+  '',
+]
+
 // Plain-language summary for people who will not read the JSON report.
 export function renderSwingFiche(result: SwingResult, info: SwingContextInfo): string {
   const m = result.metrics, r = result.rules
   const lines = [
-    `# Ficha de evaluación: ${result.candidate.id}`,
-    '',
-    `**Veredicto: ${result.verdict}**${result.candidate.kind === 'control' ? ' · control del gate, no es una estrategia' : ''}`,
-    '',
-    `- Idea evaluada: ${result.candidate.hypothesis}`,
-    `- Etapa: ${result.stage} · Periodo: ${info.period} · Datos: ${info.data}`,
-    `- Reglas: ${r.version} · Commit: \`${info.commit}\` · Huella de la definición: \`${result.candidate.definition}\` · Generado: ${info.generatedAt}`,
-    '',
+    ...ficheHeader({ ...result.candidate, stage: result.stage, verdict: result.verdict }, r, info),
     '| Prueba | Resultado | Exigido | ¿Pasa? |',
     '| --- | --- | --- | --- |',
     ...result.checks.map(c => `| ${c.label} | ${c.value} | ${c.required} | ${c.passed ? 'Sí' : '**No**'} |`),
@@ -86,18 +164,29 @@ export function renderSwingFiche(result: SwingResult, info: SwingContextInfo): s
     '| --- | --- | ---: | ---: |',
     ...m.by_year.map(y => `| ${y.from.slice(0, 10)} | ${y.to.slice(0, 10)} | ${y.trades} | ${pct(y.excess)} |`),
     '',
-    '**Caídas aceptadas** (huecos de datos idénticos en las 4 monedas)',
-    '',
-    ...(info.outages.length
-      ? info.outages.map(o => `- ${o.from.slice(0, 16).replace('T', ' ')} → ${o.to.slice(0, 16).replace('T', ' ')} (${o.bars} velas)`)
-      : ['Ninguna']),
-    '',
+    ...dataSections(info),
     `Cómo se mide: ${r.execution} Comisiones de ida y vuelta: ${r.costRoundTrip * 1e4} bps (prueba de estrés ${r.stressCostRoundTrip * 1e4} bps). ` +
       `"Frente al azar" compara con el mismo esquema TP/SL/72 h en la misma moneda y periodo; el valor p sale de ${r.permutations} desplazamientos circulares por moneda, ` +
       'reaplicando la regla de una posición a la vez.',
     '',
   ]
   return lines.join('\n')
+}
+
+// Fiche of a run that aborted because the candidate threw: no metrics, the error, and the attempt counts.
+export function renderSwingErrorFiche(candidate: SwingCandidate, stage: SwingStage, info: SwingContextInfo, error: unknown,
+  rules: SwingRules = GATE_V2_RULES): string {
+  const message = error instanceof Error ? error.message : String(error)
+  return [
+    ...ficheHeader({ ...candidate, definition: definitionHash(candidate), stage, verdict: 'RECHAZADO' }, rules, info),
+    'La corrida se abortó: el candidato lanzó un error en la evaluación principal, así que no hay pruebas ni métricas.',
+    '',
+    `Error: ${message}`,
+    '',
+    'El intento queda registrado como RECHAZADO y cuenta como corrida de esta etapa; un examen abortado no se repite.',
+    '',
+    ...dataSections(info),
+  ].join('\n')
 }
 
 // Enforces the registry rules before any data is loaded.

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { definitionHash, GATE_V2_RULES, type SwingCandidate, type SwingResult } from '../scripts/research/swing-gate'
 import {
-  assertStageAllowed, parseRegistryV2, renderSwingFiche, REGISTRY_V2_HEADER, STAGES, swingRegistryRow,
+  assertDevelopmentReproduced, assertStageAllowed, freeFichePath, fundingCoverage, parseRegistryV2, renderSwingErrorFiche,
+  renderSwingFiche, REGISTRY_V2_HEADER, STAGES, stageWindow, swingErrorRow, swingRegistryRow,
   type RegistryV2Row, type SwingContextInfo,
 } from '../scripts/research/swing-registry'
 
@@ -17,6 +18,7 @@ const row = (c: SwingCandidate, stage: 'desarrollo' | 'examen', verdict: string,
 const info: SwingContextInfo = {
   period: '2023-10 a 2026-09', commit: 'abc1234', generatedAt: '2026-10-24T12:00:00.000Z', data: 'archivo 15m',
   outages: [{ from: '2021-04-25T04:15:00.000Z', to: '2021-04-25T08:30:00.000Z', bars: 18 }],
+  funding: [{ symbol: 'SOLUSDT', first: '2020-09-13T16:00:00.004Z', last: '2023-09-30T16:00:00.000Z', points: 3300 }],
 }
 
 const rates = { tp_rate: 0.4, sl_rate: 0.35, timeout_rate: 0.25, mean_hours: 30 }
@@ -40,6 +42,20 @@ describe('stage limits', () => {
   it('declares both stages', () => {
     expect(STAGES.examen.years).toEqual(['2020-10', '2021-10', '2022-10'])
     expect(STAGES.desarrollo.loadFrom).toBe('2023-09')
+  })
+
+  it('pins the stage windows in UTC milliseconds', () => {
+    const utc = (d: string) => Date.parse(`${d}Z`)
+    expect(stageWindow('desarrollo')).toEqual({
+      loadStart: utc('2023-09-01T00:00:00.000'), loadEnd: utc('2026-09-30T23:59:59.999'),
+      periodStart: utc('2023-10-01T00:00:00.000'), periodEnd: utc('2026-10-01T00:00:00.000'),
+      yearStarts: [utc('2023-10-01T00:00:00.000'), utc('2024-10-01T00:00:00.000'), utc('2025-10-01T00:00:00.000')],
+    })
+    expect(stageWindow('examen')).toEqual({
+      loadStart: utc('2020-09-01T00:00:00.000'), loadEnd: utc('2023-09-30T23:59:59.999'),
+      periodStart: utc('2020-10-01T00:00:00.000'), periodEnd: utc('2023-10-01T00:00:00.000'),
+      yearStarts: [utc('2020-10-01T00:00:00.000'), utc('2021-10-01T00:00:00.000'), utc('2022-10-01T00:00:00.000')],
+    })
   })
 
   it('rejects a registered id with another definition', () => {
@@ -118,7 +134,81 @@ describe('stage limits', () => {
   })
 })
 
+describe('development reproduction before the exam', () => {
+  const registered = parseRegistryV2(REGISTRY_V2_HEADER + '\n' + swingRegistryRow(result(), info))[0]
+
+  it('passes when the current code gives the registered development row', () => {
+    expect(() => assertDevelopmentReproduced(registered, result(), { ...info, generatedAt: '2026-12-01', commit: 'fff0000' }))
+      .not.toThrow()
+  })
+
+  it('names the field that differs', () => {
+    const cases: [Partial<SwingResult['metrics']>, SwingResult['verdict'], string][] = [
+      [{}, 'RECHAZADO', 'verdict'],
+      [{ trades: 251 }, 'APRUEBA DESARROLLO', 'trades'],
+      [{ excess: 0.0080001 }, 'APRUEBA DESARROLLO', 'excess'],
+      [{ p_outperformance: 0.02 }, 'APRUEBA DESARROLLO', 'p_outperformance'],
+      [{ net_cost: 0.011 }, 'APRUEBA DESARROLLO', 'net_cost'],
+      [{ net_cost: null }, 'APRUEBA DESARROLLO', 'net_cost'],
+    ]
+    for (const [metrics, verdict, field] of cases) {
+      expect(() => assertDevelopmentReproduced(registered, result(metrics, verdict), info)).toThrow(new RegExp(`: ${field} is`))
+    }
+  })
+
+  it('ignores differences below the registered precision and in other columns', () => {
+    expect(() => assertDevelopmentReproduced(registered, result({ excess: 0.008 + 1e-12, tp_rate: 0.9 }), info)).not.toThrow()
+  })
+})
+
 describe('fiche and registry row', () => {
+  it('writes a rejected row with empty metrics when the candidate throws', () => {
+    const c = cand('m1')
+    const line = swingErrorRow(c, 'examen', info)
+    const fields = line.split('\t'), columns = REGISTRY_V2_HEADER.split('\t')
+    expect(fields).toHaveLength(columns.length)
+    expect(line).not.toMatch(/NaN|null|undefined/)
+    const [parsed] = parseRegistryV2(REGISTRY_V2_HEADER + '\n' + line)
+    expect(parsed).toMatchObject({ date: info.generatedAt, candidate: 'm1', kind: 'strategy', stage: 'examen', rules: 'gate-v2',
+      period: info.period, commit: 'abc1234', definition: definitionHash(c), verdict: 'RECHAZADO' })
+    for (const col of ['trades', 'excess', 'p_outperformance', 'net_cost', 'tp_rate', 'sl_rate', 'timeout_rate', 'leak_divergences'] as const) {
+      expect(parsed[col]).toBe('')
+    }
+    // The row blocks a second exam of the same candidate.
+    expect(() => assertStageAllowed({ stage: 'examen', candidates: [c], dirty: false,
+      registry: [row(c, 'desarrollo', 'APRUEBA DESARROLLO'), parsed] })).toThrow(/already examined/)
+  })
+
+  it('writes a fiche that says the run aborted and why', () => {
+    const fiche = renderSwingErrorFiche(cand('m1'), 'examen', info, new Error('boom at index 12'))
+    expect(fiche).toContain('**Veredicto: RECHAZADO**')
+    expect(fiche).toContain('boom at index 12')
+    expect(fiche).toContain('se abortó')
+    expect(fiche).toContain('Etapa: examen')
+    expect(fiche).toContain(definitionHash(cand('m1')))
+    expect(fiche).not.toMatch(/NaN|null|undefined/)
+    expect(renderSwingErrorFiche(cand('m1'), 'desarrollo', info, 'plain string')).toContain('plain string')
+  })
+
+  it('lists the funding coverage of each coin', () => {
+    const fiche = renderSwingFiche(result(), info)
+    expect(fiche).toContain('SOL: 2020-09-13 16:00:00 → 2023-09-30 16:00:00 (3300 liquidaciones)')
+    expect(renderSwingErrorFiche(cand('m1'), 'examen', info, new Error('x'))).toContain('SOL: 2020-09-13 16:00:00')
+    const H = 3_600_000, t0 = Date.parse('2020-09-13T16:00:00.004Z')
+    expect(fundingCoverage(new Map([['SOLUSDT', [0, 1, 2].map(k => ({ calcTime: t0 + k * 8 * H, intervalHours: 8, rate: 0 }))]])))
+      .toEqual([{ symbol: 'SOLUSDT', first: '2020-09-13T16:00:00.004Z', last: '2020-09-14T08:00:00.004Z', points: 3 }])
+  })
+
+  it('says a gap down fills the SL at the open', () => {
+    expect(renderSwingFiche(result(), info)).toContain('hueco a la baja')
+  })
+
+  it('never overwrites a fiche', () => {
+    const taken = new Set(['f/2026-10-24-examen-m1.md', 'f/2026-10-24-examen-m1-2.md'])
+    expect(freeFichePath('f/2026-10-24-examen-m2.md', p => taken.has(p))).toBe('f/2026-10-24-examen-m2.md')
+    expect(freeFichePath('f/2026-10-24-examen-m1.md', p => taken.has(p))).toBe('f/2026-10-24-examen-m1-3.md')
+  })
+
   it('round-trips a registry row', () => {
     const [parsed] = parseRegistryV2(REGISTRY_V2_HEADER + '\n' + swingRegistryRow(result(), info) + '\n\n')
     expect(parsed).toMatchObject({ candidate: 'm1', stage: 'desarrollo', definition: result().candidate.definition,
