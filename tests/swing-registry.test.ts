@@ -83,6 +83,26 @@ describe('stage limits', () => {
       .toThrow(/no approved development run/)
   })
 
+  it('rejects a control in examen even with an approved development row', () => {
+    const control = cand('c', 'control')
+    expect(() => assertStageAllowed({ stage: 'examen', candidates: [control], registry: [row(control, 'desarrollo', 'APRUEBA DESARROLLO')], dirty: false }))
+      .toThrow(/control/)
+  })
+
+  it('rejects duplicate ids in one run', () => {
+    const c = cand('m1')
+    const registry = [row(c, 'desarrollo', 'APRUEBA DESARROLLO')]
+    expect(() => assertStageAllowed({ stage: 'examen', candidates: [c, c], registry, dirty: false })).toThrow(/duplicate/)
+    expect(() => assertStageAllowed({ stage: 'desarrollo', candidates: [c, c], registry: [], dirty: false })).toThrow(/duplicate/)
+  })
+
+  it('rejects a kind mismatch against the registry', () => {
+    const registry = [row(cand('m1'), 'desarrollo', 'RECHAZADO')]
+    expect(() => assertStageAllowed({ stage: 'desarrollo', candidates: [cand('m1', 'control')], registry, dirty: false })).toThrow(/kind/)
+    const ctl = [row(cand('c', 'control'), 'desarrollo', 'RECHAZADO')]
+    expect(() => assertStageAllowed({ stage: 'desarrollo', candidates: [cand('c')], registry: ctl, dirty: false })).toThrow(/kind/)
+  })
+
   it('rejects a second examen of the same candidate', () => {
     const c = cand('m1')
     const registry = [row(c, 'desarrollo', 'APRUEBA DESARROLLO'), row(c, 'examen', 'RECHAZADO')]

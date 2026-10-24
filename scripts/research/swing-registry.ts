@@ -105,7 +105,12 @@ export function assertStageAllowed(input: {
   stage: SwingStage; candidates: SwingCandidate[]; registry: RegistryV2Row[]; dirty: boolean; rules?: SwingRules
 }): void {
   const { stage, candidates, registry, dirty, rules = GATE_V2_RULES } = input
+  const seen = new Set<string>()
   for (const c of candidates) {
+    if (seen.has(c.id)) throw new Error(`Candidate ${c.id} appears twice in this run (duplicate id)`)
+    seen.add(c.id)
+    const sameId = registry.find(r => r.candidate === c.id)
+    if (sameId && sameId.kind !== c.kind) throw new Error(`Candidate ${c.id} is registered with kind ${sameId.kind}, not ${c.kind}`)
     const other = registry.find(r => r.candidate === c.id && r.definition !== definitionHash(c))
     if (other) throw new Error(`Candidate ${c.id} is registered with another definition; a changed definition needs a new id`)
   }
@@ -124,6 +129,7 @@ export function assertStageAllowed(input: {
   if (dirty) throw new Error('Examen needs a clean tree: there are uncommitted changes')
   const examined = new Set(exam.map(r => r.candidate))
   for (const c of candidates) {
+    if (c.kind === 'control') throw new Error(`Candidate ${c.id} is a control; controls never reach the exam`)
     if (examined.has(c.id)) throw new Error(`Candidate ${c.id} was already examined; the exam runs once`)
     const last = dev.filter(r => r.candidate === c.id).at(-1)
     if (!last || last.verdict !== 'APRUEBA DESARROLLO') {
