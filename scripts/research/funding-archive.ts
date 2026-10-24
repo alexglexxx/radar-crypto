@@ -64,6 +64,9 @@ export async function loadArchivedFunding(symbol: string, startMs: number, endMs
       last_open: new Date(points[points.length - 1]?.calcTime ?? NaN).toISOString() })
   }
   const points = all.filter(p => p.calcTime >= startMs && p.calcTime <= endMs).sort((a, b) => a.calcTime - b.calcTime)
+  if (!points.length) {
+    throw new Error(`${symbol}: no funding settlement from ${new Date(startMs).toISOString()} to ${new Date(endMs).toISOString()}`)
+  }
   assertFundingContinuity(points, symbol)
   return { points, manifest }
 }
