@@ -4,7 +4,7 @@ import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { type Candle } from '../lib/features'
-import { assertHistoricalCoverage } from './research/historical-coverage'
+import { completedMonthsWindow, loadArchivedCandles, type ArchiveFile } from './research/binance-archive'
 
 const exec = promisify(execFile)
 
@@ -76,26 +76,8 @@ const FEE_BPS = 10
 const SLIPPAGE_BPS = 5
 const FEE_RATE = FEE_BPS / 10000
 const SLIPPAGE_RATE = SLIPPAGE_BPS / 10000
-const DATA_DIR = path.join(process.cwd(), '.backtest-cache')
 const REPORT_DIR = path.join(process.cwd(), 'reports')
 const TARGET_MONTHS = 36
-
-function monthKeys(start: Date, end: Date): string[] {
-  const output: string[] = []
-  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1))
-  const finish = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1))
-  while (cursor <= finish) {
-    output.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}`)
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1)
-  }
-  return output
-}
-
-function nowMinusMonths(months: number): Date {
-  const d = new Date()
-  d.setUTCMonth(d.getUTCMonth() - months)
-  return d
-}
 
 function startOfMonthUTC(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1, 0, 0, 0, 0))
@@ -111,67 +93,12 @@ function monthKeyToQuarter(monthKey: string): string {
   return `${year}-Q${q}`
 }
 
-async function downloadMonth(symbol: string, monthKey: string): Promise<string> {
-  const file = path.join(DATA_DIR, `${symbol}-${INTERVAL}-${monthKey}.zip`)
-  try {
-    await fs.access(file)
-    return file
-  } catch {}
-
-  const url = `https://data.binance.vision/data/spot/monthly/klines/${symbol}/${INTERVAL}/${symbol}-${INTERVAL}-${monthKey}.zip`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Binance archive ${res.status}: ${url}`)
-  const bytes = Buffer.from(await res.arrayBuffer())
-  await fs.mkdir(DATA_DIR, { recursive: true })
-  await fs.writeFile(file, bytes)
-  return file
-}
-
-async function unzipCsv(zipFile: string): Promise<Candle[]> {
-  const tempDir = path.join(DATA_DIR, `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`)
-  await fs.mkdir(tempDir, { recursive: true })
-  await exec('unzip', ['-oq', zipFile, '-d', tempDir])
-  const files = (await fs.readdir(tempDir)).filter(f => f.endsWith('.csv'))
-  if (!files.length) throw new Error(`No CSV inside ${zipFile}`)
-  const csv = await fs.readFile(path.join(tempDir, files[0]), 'utf8')
-  const lines = csv.trim().split(/\r?\n/)
-  const startIndex = lines[0]?.toLowerCase().includes('open time') ? 1 : 0
-  const candles: Candle[] = []
-
-  for (let i = startIndex; i < lines.length; i++) {
-    const row = lines[i].split(',')
-    if (row.length < 6) continue
-    const [openTimeRaw, openRaw, highRaw, lowRaw, closeRaw, volumeRaw] = row
-    const rawOpenTime = Number(openTimeRaw)
-    const openTime = rawOpenTime > 1e14 ? Math.floor(rawOpenTime / 1000) : rawOpenTime
-    const open = Number(openRaw)
-    const high = Number(highRaw)
-    const low = Number(lowRaw)
-    const close = Number(closeRaw)
-    const volume = Number(volumeRaw)
-    if ([openTime, open, high, low, close, volume].every(Number.isFinite)) {
-      candles.push({ openTime, open, high, low, close, volume })
-    }
-  }
-
-  await fs.rm(tempDir, { recursive: true, force: true })
-  return candles
-}
+const archiveFiles: ArchiveFile[] = []
 
 async function loadSymbol(symbol: string, startMs: number, endMs: number): Promise<Candle[]> {
-  const months = monthKeys(new Date(startMs), new Date(endMs))
-  const candles: Candle[] = []
-  for (const monthKey of months) {
-    const zipFile = await downloadMonth(symbol, monthKey)
-    const monthCandles = await unzipCsv(zipFile)
-    candles.push(...monthCandles)
-  }
-
-  const selected = candles
-    .filter(c => c.openTime >= startMs && c.openTime <= endMs)
-    .sort((a, b) => a.openTime - b.openTime)
-  assertHistoricalCoverage(selected, symbol, startMs, endMs)
-  return selected
+  const { candles, manifest } = await loadArchivedCandles(symbol, startMs, endMs, { interval: INTERVAL })
+  archiveFiles.push(...manifest)
+  return candles
 }
 
 function applyFee(ret: number, feeBps = FEE_BPS, slippageBps = SLIPPAGE_BPS) {
@@ -385,17 +312,15 @@ function allPairs<T extends Record<string, any>>(input: T[], key: keyof T) {
 }
 
 async function main() {
-  const start = nowMinusMonths(TARGET_MONTHS)
-  const end = new Date()
-  const startMs = start.getTime()
-  const endMs = end.getTime()
+  const { startMs, endMs } = completedMonthsWindow(TARGET_MONTHS)
+  const start = new Date(startMs)
+  const end = new Date(endMs)
 
   const symbolData = new Map<string, Candle[]>()
   const dataMeta = {
     DATA_START: start.toISOString(),
     DATA_END: end.toISOString(),
     TOTAL_CANDLES: 0,
-    MISSING_DATA: 0,
     SYMBOLS_PROCESSED: SYMBOLS,
     MODEL_VERSION,
   }
@@ -601,7 +526,9 @@ async function main() {
       start: start.toISOString(),
       end: end.toISOString(),
       total_candles: dataMeta.TOTAL_CANDLES,
-      missing_data: dataMeta.MISSING_DATA,
+      // Loading aborts on any missing, duplicate or invalid candle.
+      coverage: 'complete',
+      archive_files: archiveFiles,
       symbols_processed: SYMBOLS,
       interval: INTERVAL,
       timeframes: HORIZONS,

@@ -76,8 +76,56 @@ Controles de mutación: quitar el bloque heredado y el guard hace fallar las pru
 
 **Procedimiento seguido.** 1) Ejecutar el SQL de la migración en producción como una sola transacción. 2) `node scripts/audit-public-access.mjs --expect-locked` debe salir con código 0. 3) Abrir `radar-crypto.vercel.app`: "4/4 activos al día" e historial visible. 4) Esperar una ejecución del cron (HTTP 200) y comprobar outcomes pendientes = 0. Si el dashboard falla, aplicar el rollback y repetir los pasos 2 y 3.
 
+## 5. Backtest histórico con ventana live (tareas 3 y 4)
+
+**Registrado antes de ejecutar (2026-10-24).** Ventana: 36 meses completos, de 2023-10 a 2026-09. Reserva: 2023-10 a 2024-09. Ningún análisis previo por tramo de score cubrió ese periodo: la atribución de `production-score-walkforward` empieza en 2024-10.
+
+- **H1:** en la reserva, el exceso a 4h con entrada en apertura siguiente de las señales LONG con score 80–100 es ≥ que el de las de score 75–79.
+- **Decisión:** si H1 se cumple, la inversión 80–100 observada en live se trata como propia de la ventana o del régimen. Si falla, se trata como estructural.
+- Los cortes por trimestre, tendencia, volatilidad y movimiento previo son descriptivos y no cambian la decisión.
+
+**Ejecución.**
+
+```powershell
+npx tsx scripts/research/run-historical-baseline.mts --from-month=2023-10 --to-month=2026-09 --holdout-end-month=2024-09 --permutations=2000 --seed=20261024
+```
+
+Genera `reports/historical-baseline.json` (ignorado por Git), unos 3.5 minutos con caché.
+
+- **Datos:** 144 archivos mensuales de `data.binance.vision`, con URL, SHA-256, bytes y primera/última vela por archivo. Hash del manifiesto: `8c39a495be356c34…`.
+- **Cobertura:** 105 216 de 105 216 velas por activo, de 2023-10-01 00:00 a 2026-09-30 23:45.
+- **Exclusiones declaradas por activo:** 248 de calentamiento y 17 de cola (estructurales), 0 rechazos de replay, 0 ventanas cortas.
+- **Señales:** 51 790 LONG (BTC 10 414, ETH 12 159, SOL 16 069, XRP 13 148), que forman 5 232 episodios independientes a 4h.
+
+**Tarea 3. Resultado principal (apertura siguiente, ventana live de 249 velas).**
+
+| Horizonte | Exceso frente a baseline del mismo activo | p circular bilateral | Neto 20 bps | Neto 30 bps | Ops. con ganancia neta a 20 bps |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 15m | +0.002 % | 0.41 | −0.196 % | −0.296 % | 24.7 % |
+| 1h | +0.008 % | 0.26 | −0.185 % | −0.285 % | 33.2 % |
+| 4h | +0.033 % | 0.12 | −0.138 % | −0.238 % | 40.4 % |
+
+El comparador de cierre a cierre da casi lo mismo (+0.033 % a 4h, p = 0.12). En 36 meses la selección del score no se distingue de entrar al azar en el mismo activo, y con costes realistas cada operación pierde en promedio en los tres horizontes. Por activo a 4h: XRP +0.084 %, ETH +0.046 %, SOL +0.006 %, BTC −0.003 %. Ninguno queda positivo neto de 20 bps. Coincide con la ventana live (neto −0.23 % a −0.29 %) y con los walk-forward de las ramas.
+
+**Tarea 4. H1 no se cumple.** En la reserva (2023-10 a 2024-09), a 4h, el tramo 80–100 rinde 0.066 puntos porcentuales **menos** que el 75–79 (10 907 frente a 7 032 señales; p de permutación de etiquetas 0.011, optimista por el solape). Según la regla registrada, la inversión no puede atribuirse solo a la ventana live.
+
+El contexto descriptivo matiza la conclusión. Después de la reserva (2024-10 a 2026-09) el orden se invierte: 80–100 rinde +0.045 puntos más (p = 0.026), lo que replica la atribución de `production-score-walkforward` en ese mismo periodo. En el total de 36 meses la diferencia es +0.006 (p = 0.68). Por trimestre, el tramo alto rinde menos en 5 de 12 trimestres, y esas inversiones no siguen la dirección del mercado: aparecen con subas de +108 % y +57 % y con caídas de −23 %. La lectura que soportan los datos es que **por encima de 75 el score no ordena las señales de forma estable**: el signo de la diferencia entre tramos cambia según el periodo. No es una inversión estructural constante ni una propiedad exclusiva de octubre de 2026. Esto no justifica ajustar umbrales.
+
+Cortes descriptivos a 4h, sin valor de decisión y no corregidos por pruebas múltiples:
+- **Tendencia:** EMA50 > EMA200, +0.050 % (37 549 señales); EMA50 < EMA200, −0.010 % (14 241).
+- **Volatilidad:** tercil alto +0.055 %, medio +0.010 %, bajo +0.022 %.
+- **Movimiento previo de 4h:** negativo +0.062 % (solo 1 316 señales), +0–1 % +0.016 %, ≥ +1 % +0.042 %.
+
+Ningún corte queda positivo neto de costes. El mejor, volatilidad alta, da −0.114 % neto a 20 bps.
+
+**Scripts anteriores.** `backtest.ts` y `backtest-baseline.ts` usan ahora el mismo cargador (`scripts/research/binance-archive.ts`): una fila ilegible o un mes faltante abortan la carga, la ventana termina en el último mes completo y el reporte incluye el manifiesto de archivos. Se eliminó el contador constante `missing_data: 0`. `backtest-baseline.ts` ya termina (51 808 señales). La diferencia de 18 señales frente a este reporte viene de que acepta ventanas de calentamiento de menos de 249 velas. Sus métricas son brutas y de cierre a cierre; la referencia es este reporte.
+
+**Límites.** Solo spot, 4 activos, costes supuestos, sin liquidez, latencia ni ejecución parcial. Los trimestres y cortes se vieron después de registrar H1, pero no se usaron para formularla.
+
 ## Validación local
 
 2026-10-21: `npm test` 36 pruebas, typecheck y build pasan.
 
-2026-10-23: `npm test` 42/42 en tres corridas consecutivas (incluye las 6 de la sección 4); `npm run typecheck -- --incremental false`, `npm run lint`, `npm run build`, `npm run verify:engine` (18 checkpoints) y `git diff --check` pasan. La prueba de migración construye la réplica una vez y la clona por caso: con siete arranques de PGlite en paralelo, las pruebas pesadas de paridad y cron superaban el timeout de 5 s en 4 núcleos. La migración sigue sin aplicarse a producción; el siguiente paso es la decisión de aplicarla (sección 4).
+2026-10-23: `npm test` 42/42 en tres corridas consecutivas (incluye las 6 de la sección 4); `npm run typecheck -- --incremental false`, `npm run lint`, `npm run build`, `npm run verify:engine` (18 checkpoints) y `git diff --check` pasan. La prueba de migración construye la réplica una vez y la clona por caso: con siete arranques de PGlite en paralelo, las pruebas pesadas de paridad y cron superaban el timeout de 5 s en 4 núcleos. La migración se aplicó el 2026-10-24 (sección 4).
+
+2026-10-24, tareas 3 y 4: `npm test` 47/47 (incluye 5 pruebas nuevas del cargador y del replay histórico), typecheck, lint, `verify:engine` y `git diff --check` pasan. `backtest-baseline.ts` corre de punta a punta.
